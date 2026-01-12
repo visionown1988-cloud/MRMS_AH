@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserRole, MatchSession } from './types.ts';
 import { storageService } from './services/storage.ts';
 import AdminPanel from './components/AdminPanel.tsx';
@@ -12,90 +12,33 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'admin' | 'referee' | 'results'>('results');
   const [showLogin, setShowLogin] = useState<UserRole | null>(null);
   const [sessions, setSessions] = useState<MatchSession[]>([]);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-  const [syncId, setSyncId] = useState<string | null>(localStorage.getItem('current_sync_id'));
-  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
-
-  const updateSessions = useCallback(() => {
-    const data = storageService.getSessions();
-    setSessions(data);
-    setLastUpdate(new Date());
-  }, []);
-
-  // 處理雲端同步
-  const handleCloudSync = useCallback(async () => {
-    if (!syncId) return;
-    setIsCloudSyncing(true);
-    const cloudData = await storageService.cloud.fetchBin(syncId);
-    if (cloudData) {
-      // 簡單的合併策略：若雲端有資料，直接以雲端為準（覆蓋本地）
-      storageService.saveSessions(cloudData);
-      setSessions(cloudData);
-      setLastUpdate(new Date());
-    }
-    setIsCloudSyncing(false);
-  }, [syncId]);
 
   useEffect(() => {
-    updateSessions();
+    setSessions(storageService.getSessions());
+  }, []);
 
-    // 解析 URL 中的 syncId (例如 ?sid=123)
-    const params = new URLSearchParams(window.location.search);
-    const sid = params.get('sid');
-    if (sid && sid !== syncId) {
-      setSyncId(sid);
-      localStorage.setItem('current_sync_id', sid);
+  const handleLogin = (targetRole: UserRole) => {
+    if (role === targetRole) {
+      if (targetRole === UserRole.ADMIN) setActiveTab('admin');
+      if (targetRole === UserRole.REFEREE) setActiveTab('referee');
+      return;
     }
-
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'match_results_app_data' || e.key === null) {
-        updateSessions();
-      }
-    };
-    window.addEventListener('storage', handleStorageChange);
-
-    // 輪詢邏輯：如果有同步 ID，每 3 秒檢查雲端；否則檢查本地
-    const interval = setInterval(() => {
-      if (syncId) {
-        handleCloudSync();
-      } else {
-        updateSessions();
-      }
-    }, 3500);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      clearInterval(interval);
-    };
-  }, [updateSessions, syncId, handleCloudSync]);
-
-  const onSessionCreated = () => {
-    updateSessions();
-    // 若有同步 ID，創建後自動推送到雲端
-    if (syncId) {
-      storageService.cloud.updateBin(syncId, storageService.getSessions());
-    }
+    setShowLogin(targetRole);
   };
 
-  const handleJoinSync = (id: string) => {
-    setSyncId(id);
-    localStorage.setItem('current_sync_id', id);
-    alert(`已成功切換至同步 ID: ${id}`);
-    handleCloudSync();
-  };
-
-  const stopSync = () => {
-    if (window.confirm('確定停止同步？停止後將僅能看到本地儲存的舊資料。')) {
-      setSyncId(null);
-      localStorage.removeItem('current_sync_id');
-    }
+  const handleLogout = () => {
+    setRole(UserRole.GUEST);
+    setActiveTab('results');
   };
 
   const onLoginSuccess = (successRole: UserRole) => {
     setRole(successRole);
     setShowLogin(null);
     setActiveTab(successRole === UserRole.ADMIN ? 'admin' : 'referee');
-    updateSessions();
+  };
+
+  const updateSessions = () => {
+    setSessions(storageService.getSessions());
   };
 
   const getRoleLabel = (r: UserRole) => {
@@ -117,25 +60,41 @@ const App: React.FC = () => {
           
           <div className="flex items-center space-x-1 sm:space-x-4">
             <nav className="flex space-x-1">
-              <button onClick={() => setActiveTab('results')} className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition ${activeTab === 'results' ? 'bg-indigo-800' : 'hover:bg-indigo-600'}`}>比賽看板</button>
-              <button onClick={() => { if(role === UserRole.REFEREE) setActiveTab('referee'); else setShowLogin(UserRole.REFEREE); }} className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition ${activeTab === 'referee' ? 'bg-indigo-800' : 'hover:bg-indigo-600'}`}>裁判專區</button>
-              <button onClick={() => { if(role === UserRole.ADMIN) setActiveTab('admin'); else setShowLogin(UserRole.ADMIN); }} className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition ${activeTab === 'admin' ? 'bg-indigo-800' : 'hover:bg-indigo-600'}`}>後台管理</button>
+              <button 
+                onClick={() => setActiveTab('results')}
+                className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition ${activeTab === 'results' ? 'bg-indigo-800' : 'hover:bg-indigo-600'}`}
+              >
+                <span className="hidden sm:inline">一般選手 / </span>比賽結果
+              </button>
+              <button 
+                onClick={() => handleLogin(UserRole.REFEREE)}
+                className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition ${activeTab === 'referee' ? 'bg-indigo-800' : 'hover:bg-indigo-600'}`}
+              >
+                裁判專區
+              </button>
+              <button 
+                onClick={() => handleLogin(UserRole.ADMIN)}
+                className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition ${activeTab === 'admin' ? 'bg-indigo-800' : 'hover:bg-indigo-600'}`}
+              >
+                後台管理
+              </button>
             </nav>
 
-            <div className="flex items-center ml-2 space-x-2">
-               {syncId ? (
-                 <div className="flex items-center bg-indigo-800 px-2 py-1 rounded border border-indigo-400" title={`同步 ID: ${syncId}`}>
-                    <i className={`fas fa-cloud text-[10px] mr-1 ${isCloudSyncing ? 'animate-pulse text-green-400' : 'text-indigo-300'}`}></i>
-                    <span className="text-[10px] font-mono font-bold">{syncId.substring(0,6)}</span>
-                    <button onClick={stopSync} className="ml-1 text-[10px] text-indigo-400 hover:text-white"><i className="fas fa-times"></i></button>
-                 </div>
-               ) : (
-                 <div className="hidden sm:flex items-center bg-slate-600 px-2 py-1 rounded text-[10px] text-slate-300">
-                    <i className="fas fa-cloud-slash mr-1"></i> 本地模式
-                 </div>
-               )}
+            <div className="h-8 w-[1px] bg-indigo-500 mx-2 hidden sm:block"></div>
+
+            <div className="flex items-center space-x-2">
+               <div className="hidden lg:flex flex-col items-end mr-2">
+                 <span className="text-[10px] text-indigo-300 uppercase font-bold">目前身分</span>
+                 <span className="text-xs font-bold">{getRoleLabel(role)}</span>
+               </div>
                {role !== UserRole.GUEST && (
-                 <button onClick={() => {setRole(UserRole.GUEST); setActiveTab('results');}} className="bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center transition shadow-sm"><i className="fas fa-sign-out-alt text-xs"></i></button>
+                 <button 
+                  onClick={handleLogout}
+                  title="登出切換身分"
+                  className="bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center transition shadow-sm"
+                 >
+                   <i className="fas fa-sign-out-alt text-xs"></i>
+                 </button>
                )}
             </div>
           </div>
@@ -143,36 +102,83 @@ const App: React.FC = () => {
       </header>
 
       <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-        <div className="mb-4 flex justify-end items-center space-x-2">
-            <span className="relative flex h-2 w-2">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${syncId ? 'bg-green-400' : 'bg-blue-400'}`}></span>
-              <span className={`relative inline-flex rounded-full h-2 w-2 ${syncId ? 'bg-green-500' : 'bg-blue-500'}`}></span>
-            </span>
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-              {syncId ? `同步 ID: ${syncId}` : '本地資料'} (更新: {lastUpdate.toLocaleTimeString()})
-            </span>
+        <div className="mb-6 flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-gray-100 lg:hidden">
+          <div className="flex items-center space-x-2">
+            <div className={`w-2 h-2 rounded-full ${role === UserRole.ADMIN ? 'bg-purple-500' : role === UserRole.REFEREE ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>
+            <span className="text-sm font-medium text-gray-600">目前身分: <span className="font-bold text-gray-900">{getRoleLabel(role)}</span></span>
+          </div>
+          {role !== UserRole.GUEST && (
+            <button onClick={handleLogout} className="text-xs text-red-500 font-bold hover:underline">
+              切換身分
+            </button>
+          )}
         </div>
 
         {activeTab === 'results' && (
           <ResultsBoard 
             sessions={sessions} 
             userRole={role} 
-            onRefresh={syncId ? handleCloudSync : updateSessions} 
-            onJoinSync={handleJoinSync}
-            currentSyncId={syncId || undefined}
+            onRefresh={updateSessions} 
           />
         )}
         
         {activeTab === 'admin' && role === UserRole.ADMIN && (
-          <AdminPanel onSessionCreated={onSessionCreated} currentSyncId={syncId || undefined} setSyncId={handleJoinSync} />
+          <AdminPanel onSessionCreated={updateSessions} />
         )}
 
         {activeTab === 'referee' && role === UserRole.REFEREE && (
-          <RefereePanel sessions={sessions} onResultSubmitted={onSessionCreated} />
+          <RefereePanel sessions={sessions} onResultSubmitted={updateSessions} />
         )}
 
-        {showLogin && <LoginModal targetRole={showLogin} onClose={() => setShowLogin(null)} onSuccess={onLoginSuccess} />}
+        {(activeTab === 'admin' || activeTab === 'referee') && role !== (activeTab === 'admin' ? UserRole.ADMIN : UserRole.REFEREE) && (
+          <div className="text-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-indigo-50 text-indigo-500 mb-6">
+              <i className="fas fa-user-lock text-3xl"></i>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">權限不足</h2>
+            <p className="text-gray-500 mb-8 max-w-md mx-auto">您目前的身份為 <span className="font-bold text-indigo-600">{getRoleLabel(role)}</span>，無權訪問此頁面。請先登入正確身份。</p>
+            <div className="flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-4">
+               <button 
+                onClick={() => handleLogin(activeTab === 'admin' ? UserRole.ADMIN : UserRole.REFEREE)}
+                className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-indigo-700 transition shadow-lg"
+               >
+                 登入為 {activeTab === 'admin' ? '管理員' : '裁判'}
+               </button>
+               <button 
+                onClick={() => setActiveTab('results')}
+                className="bg-gray-100 text-gray-600 px-8 py-3 rounded-xl font-bold hover:bg-gray-200 transition"
+               >
+                 返回比賽結果
+               </button>
+            </div>
+          </div>
+        )}
       </main>
+
+      <nav className="md:hidden bg-white border-t border-gray-200 sticky bottom-0 z-50 pb-safe">
+        <div className="flex justify-around items-center h-16">
+          <button onClick={() => setActiveTab('results')} className={`flex flex-col items-center flex-1 py-1 ${activeTab === 'results' ? 'text-indigo-600' : 'text-gray-400'}`}>
+            <i className="fas fa-medal text-lg"></i>
+            <span className="text-[10px] mt-1 font-bold">比賽結果</span>
+          </button>
+          <button onClick={() => handleLogin(UserRole.REFEREE)} className={`flex flex-col items-center flex-1 py-1 ${activeTab === 'referee' ? 'text-indigo-600' : 'text-gray-400'}`}>
+            <i className="fas fa-whistle text-lg"></i>
+            <span className="text-[10px] mt-1 font-bold">裁判專區</span>
+          </button>
+          <button onClick={() => handleLogin(UserRole.ADMIN)} className={`flex flex-col items-center flex-1 py-1 ${activeTab === 'admin' ? 'text-indigo-600' : 'text-gray-400'}`}>
+            <i className="fas fa-user-shield text-lg"></i>
+            <span className="text-[10px] mt-1 font-bold">後台管理</span>
+          </button>
+        </div>
+      </nav>
+
+      {showLogin && (
+        <LoginModal 
+          targetRole={showLogin} 
+          onClose={() => setShowLogin(null)} 
+          onSuccess={onLoginSuccess} 
+        />
+      )}
     </div>
   );
 };
