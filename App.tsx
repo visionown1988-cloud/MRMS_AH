@@ -1,11 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserRole, MatchSession } from './types';
-import { storageService } from './services/storage';
-import AdminPanel from './components/AdminPanel';
-import RefereePanel from './components/RefereePanel';
-import ResultsBoard from './components/ResultsBoard';
-import LoginModal from './components/LoginModal';
+import { UserRole, MatchSession } from './types.ts';
+import { storageService } from './services/storage.ts';
+import AdminPanel from './components/AdminPanel.tsx';
+import RefereePanel from './components/RefereePanel.tsx';
+import ResultsBoard from './components/ResultsBoard.tsx';
+import LoginModal from './components/LoginModal.tsx';
 
 const App: React.FC = () => {
   const [role, setRole] = useState<UserRole>(UserRole.GUEST);
@@ -18,14 +18,11 @@ const App: React.FC = () => {
   }, []);
 
   const handleLogin = (targetRole: UserRole) => {
-    // If clicking a role that is already the current role, just switch tab
     if (role === targetRole) {
       if (targetRole === UserRole.ADMIN) setActiveTab('admin');
       if (targetRole === UserRole.REFEREE) setActiveTab('referee');
       return;
     }
-    
-    // If not the current role, trigger login
     setShowLogin(targetRole);
   };
 
@@ -54,7 +51,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Header */}
       <header className="bg-indigo-700 text-white shadow-lg sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setActiveTab('results')}>
@@ -105,9 +101,7 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-        {/* Role Indicator Banner */}
         <div className="mb-6 flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-gray-100 lg:hidden">
           <div className="flex items-center space-x-2">
             <div className={`w-2 h-2 rounded-full ${role === UserRole.ADMIN ? 'bg-purple-500' : role === UserRole.REFEREE ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>
@@ -161,27 +155,17 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* Mobile Footer Nav (Improved) */}
       <nav className="md:hidden bg-white border-t border-gray-200 sticky bottom-0 z-50 pb-safe">
         <div className="flex justify-around items-center h-16">
-          <button 
-            onClick={() => setActiveTab('results')}
-            className={`flex flex-col items-center flex-1 py-1 ${activeTab === 'results' ? 'text-indigo-600' : 'text-gray-400'}`}
-          >
+          <button onClick={() => setActiveTab('results')} className={`flex flex-col items-center flex-1 py-1 ${activeTab === 'results' ? 'text-indigo-600' : 'text-gray-400'}`}>
             <i className="fas fa-medal text-lg"></i>
             <span className="text-[10px] mt-1 font-bold">比賽結果</span>
           </button>
-          <button 
-            onClick={() => handleLogin(UserRole.REFEREE)}
-            className={`flex flex-col items-center flex-1 py-1 ${activeTab === 'referee' ? 'text-indigo-600' : 'text-gray-400'}`}
-          >
+          <button onClick={() => handleLogin(UserRole.REFEREE)} className={`flex flex-col items-center flex-1 py-1 ${activeTab === 'referee' ? 'text-indigo-600' : 'text-gray-400'}`}>
             <i className="fas fa-whistle text-lg"></i>
             <span className="text-[10px] mt-1 font-bold">裁判專區</span>
           </button>
-          <button 
-            onClick={() => handleLogin(UserRole.ADMIN)}
-            className={`flex flex-col items-center flex-1 py-1 ${activeTab === 'admin' ? 'text-indigo-600' : 'text-gray-400'}`}
-          >
+          <button onClick={() => handleLogin(UserRole.ADMIN)} className={`flex flex-col items-center flex-1 py-1 ${activeTab === 'admin' ? 'text-indigo-600' : 'text-gray-400'}`}>
             <i className="fas fa-user-shield text-lg"></i>
             <span className="text-[10px] mt-1 font-bold">後台管理</span>
           </button>
