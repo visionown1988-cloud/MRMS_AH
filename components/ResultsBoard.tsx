@@ -57,7 +57,7 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
             <button
               key={s.id}
               onClick={() => setSelectedSessionId(s.id)}
-              className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all border-2 ${
+              className={`px-5 py-2.5 rounded-xl text-[16px] font-bold transition-all border-2 ${
                 selectedSessionId === s.id
                   ? 'bg-indigo-600 text-white border-indigo-600 shadow-md scale-105'
                   : 'bg-white text-gray-600 border-gray-100 hover:border-indigo-200 hover:bg-indigo-50'
@@ -118,18 +118,30 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
               <h3 className="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-4 flex items-center">
                 <i className="fas fa-poll-h mr-2"></i> 已產生成績摘要 ({completedMatches.length})
               </h3>
-              <div className="flex flex-wrap gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
                 {completedMatches.map(t => (
-                  <div key={t.tableNumber} className="bg-white px-4 py-2.5 rounded-xl shadow-sm border border-indigo-100 flex items-center space-x-3">
-                    <span className="font-bold text-indigo-600 text-[16px]">第{t.tableNumber}桌:</span>
-                    <span className="text-slate-700 text-[16px] font-medium">{t.player1.name} <span className="text-xs text-indigo-400 font-bold">(#{t.player1.id})</span></span>
-                    <span className={`font-black px-2 py-0.5 rounded text-[16px] ${
+                  <div key={t.tableNumber} className="bg-white px-3 py-3 rounded-xl shadow-sm border border-indigo-100 flex items-center justify-between overflow-hidden">
+                    <div className="flex items-center space-x-2 flex-1 min-w-0">
+                      <span className="font-bold text-indigo-600 text-xs flex-shrink-0">T{t.tableNumber}</span>
+                      <div className="flex items-center space-x-1 min-w-0 flex-1 truncate">
+                        <span className="text-slate-700 text-[16px] font-bold truncate">{t.player1.name}</span>
+                        <span className="text-[10px] text-indigo-400 font-bold flex-shrink-0">#{t.player1.id}</span>
+                      </div>
+                    </div>
+                    
+                    <span className={`flex-shrink-0 mx-2 font-black px-2.5 py-1 rounded text-[16px] ${
                       t.result === GameResult.WIN ? 'bg-green-100 text-green-700' : 
                       t.result === GameResult.LOSS ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
                     }`}>
                       {t.result}
                     </span>
-                    <span className="text-slate-700 text-[16px] font-medium">{t.player2.name} <span className="text-xs text-indigo-400 font-bold">(#{t.player2.id})</span></span>
+
+                    <div className="flex items-center space-x-1 flex-1 min-w-0 justify-end">
+                      <div className="flex items-center space-x-1 min-w-0 flex-1 justify-end truncate text-right">
+                        <span className="text-slate-700 text-[16px] font-bold truncate">{t.player2.name}</span>
+                        <span className="text-[10px] text-indigo-400 font-bold flex-shrink-0">#{t.player2.id}</span>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -146,13 +158,13 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
                 <div className="p-4 space-y-4">
                   <div className="flex items-center justify-between">
                     <div className="text-center flex-1">
-                      <p className="text-xs text-gray-500">先手 (P1)</p>
+                      <p className="text-xs text-gray-500">先手</p>
                       <p className="font-bold text-gray-800 truncate">{table.player1.name}</p>
                       <p className="text-[10px] text-indigo-500 font-black">#{table.player1.id}</p>
                     </div>
                     <div className="px-4 text-gray-300 italic font-light">vs</div>
                     <div className="text-center flex-1">
-                      <p className="text-xs text-gray-500">後手 (P2)</p>
+                      <p className="text-xs text-gray-500">後手</p>
                       <p className="font-bold text-gray-800 truncate">{table.player2.name}</p>
                       <p className="text-[10px] text-indigo-500 font-black">#{table.player2.id}</p>
                     </div>

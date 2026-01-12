@@ -110,7 +110,7 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
                   key={s.id}
                   type="button"
                   onClick={() => setSelectedSessionId(s.id)}
-                  className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all border-2 ${
+                  className={`px-4 py-2.5 rounded-xl text-[16px] font-bold transition-all border-2 ${
                     selectedSessionId === s.id
                       ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-100'
                       : 'bg-white text-gray-500 border-gray-100 hover:border-emerald-200'
@@ -136,7 +136,7 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
                     key={r}
                     type="button"
                     onClick={() => handleNameSelect(r)}
-                    className="px-4 py-3 bg-white border border-gray-100 rounded-xl font-bold text-gray-700 hover:bg-emerald-50 hover:border-emerald-200 transition text-sm"
+                    className="px-4 py-3 bg-white border border-gray-100 rounded-xl font-bold text-gray-700 hover:bg-emerald-50 hover:border-emerald-200 transition text-[16px]"
                   >
                     {r}
                   </button>
@@ -158,16 +158,15 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
                     key={t.tableNumber}
                     type="button"
                     onClick={() => setSelectedTableNumber(t.tableNumber)}
-                    className={`aspect-square rounded-xl text-sm font-black transition-all border-2 flex flex-col items-center justify-center ${
+                    className={`aspect-square rounded-xl transition-all border-2 flex items-center justify-center ${
                       selectedTableNumber === t.tableNumber
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-105'
                         : t.result !== GameResult.PENDING 
                           ? 'bg-gray-100 text-gray-400 border-gray-100 cursor-default opacity-50'
                           : 'bg-white text-gray-600 border-gray-100 hover:border-emerald-300 hover:bg-emerald-50'
                     }`}
                   >
-                    <span className="text-[10px] opacity-60 font-medium">No.</span>
-                    <span className="text-lg">{t.tableNumber}</span>
+                    <span className="text-[18px] font-black">{t.tableNumber}</span>
                   </button>
                 ))}
               </div>
@@ -184,13 +183,13 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
                   <div className="flex-1">
                     <p className="text-xs text-indigo-500 font-bold mb-1">#{currentTable.player1.id}</p>
                     <p className="font-black text-gray-800 text-xl">{currentTable.player1.name}</p>
-                    <p className="text-[10px] text-gray-400 mt-1">先手 (P1)</p>
+                    <p className="text-[10px] text-gray-400 mt-1">先手</p>
                   </div>
                   <div className="px-2 text-slate-300 font-light italic text-xl">VS</div>
                   <div className="flex-1">
                     <p className="text-xs text-indigo-500 font-bold mb-1">#{currentTable.player2.id}</p>
                     <p className="font-black text-gray-800 text-xl">{currentTable.player2.name}</p>
-                    <p className="text-[10px] text-gray-400 mt-1">後手 (P2)</p>
+                    <p className="text-[10px] text-gray-400 mt-1">後手</p>
                   </div>
                 </div>
               </div>
