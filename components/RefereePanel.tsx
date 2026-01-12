@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { MatchSession, MatchStatus, TableMatch, GameResult } from '../types';
-import { storageService } from '../services/storage';
+import { MatchSession, MatchStatus, TableMatch, GameResult } from '../types.ts';
+import { storageService } from '../services/storage.ts';
 
 interface RefereePanelProps {
   sessions: MatchSession[];
@@ -17,7 +17,6 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
   const currentSession = sessions.find(s => s.id === selectedSessionId);
   const currentTable = currentSession?.tables.find(t => t.tableNumber === selectedTableNumber);
 
-  // Reset selections when session changes
   useEffect(() => {
     setSelectedTableNumber('');
     setResult(GameResult.PENDING);
@@ -51,7 +50,6 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
 
     onResultSubmitted();
     alert('結果已成功傳送！');
-    // Reset selections for next table
     setSelectedTableNumber('');
     setResult(GameResult.PENDING);
   };
@@ -65,7 +63,6 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Step 1: Select Session */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">選擇比賽場次</label>
             <select 
@@ -82,7 +79,6 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
             </select>
           </div>
 
-          {/* Step 2: Select Referee Name (from pool) */}
           {selectedSessionId && currentSession && (
             <div className="animate-in fade-in slide-in-from-top-2 duration-300">
               <label className="block text-sm font-semibold text-gray-700 mb-1">您的姓名</label>
@@ -113,7 +109,6 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
             </div>
           )}
 
-          {/* Step 3: Select Table */}
           {selectedSessionId && (
             <div className="animate-in fade-in slide-in-from-top-2 duration-400">
               <label className="block text-sm font-semibold text-gray-700 mb-1">選擇桌號</label>
@@ -132,7 +127,6 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
             </div>
           )}
 
-          {/* Table Details */}
           {currentTable && (
             <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-100 animate-in zoom-in duration-300">
               <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-2">對弈資訊</p>
@@ -149,7 +143,6 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
             </div>
           )}
 
-          {/* Result Selection */}
           {currentTable && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
               <label className="block text-sm font-semibold text-gray-700 mb-3">比賽結果 (先手狀態)</label>

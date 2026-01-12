@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
-import { MatchSession, UserRole, MatchStatus, TableMatch, GameResult } from '../types';
-import { storageService } from '../services/storage';
+import { MatchSession, UserRole, MatchStatus, TableMatch, GameResult } from '../types.ts';
+import { storageService } from '../services/storage.ts';
 
 interface ResultsBoardProps {
   sessions: MatchSession[];
@@ -42,13 +42,10 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
   };
 
   const sortedTables = selectedSession ? [...selectedSession.tables].sort((a, b) => a.tableNumber - b.tableNumber) : [];
-  
-  // Calculate completed matches for the summary list
   const completedMatches = sortedTables.filter(t => t.result !== GameResult.PENDING);
 
   return (
     <div className="space-y-6">
-      {/* Session Selection */}
       <div className="bg-white p-4 rounded-xl shadow-sm border flex flex-wrap items-center gap-4">
         <label className="font-bold text-gray-700">選擇比賽場次：</label>
         <div className="flex-grow">
@@ -107,7 +104,6 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
             </div>
           </div>
 
-          {/* Quick Summary Section */}
           {completedMatches.length > 0 && (
             <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 shadow-sm">
               <h3 className="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-3 flex items-center">
@@ -136,7 +132,6 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
               <div key={table.tableNumber} className="bg-white rounded-xl shadow-sm border hover:shadow-md transition overflow-hidden">
                 <div className="bg-gray-50 px-4 py-2 border-b flex justify-between items-center">
                   <span className="font-bold text-indigo-600">第 {table.tableNumber} 桌</span>
-                  {table.assignedReferee && <span className="text-[10px] text-gray-400">指派: {table.assignedReferee}</span>}
                 </div>
                 
                 <div className="p-4 space-y-4">
@@ -207,12 +202,6 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
               </div>
             ))}
           </div>
-          
-          {sortedTables.length === 0 && (
-            <div className="text-center py-20 bg-white rounded-xl border border-dashed">
-              <p className="text-gray-400">此場次暫無對弈資料</p>
-            </div>
-          )}
         </div>
       ) : (
         <div className="text-center py-20 bg-white rounded-xl shadow-sm border animate-pulse">

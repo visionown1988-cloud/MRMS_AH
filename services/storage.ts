@@ -1,5 +1,5 @@
 
-import { MatchSession } from '../types';
+import { MatchSession } from '../types.ts';
 
 const STORAGE_KEY = 'match_results_app_data';
 
