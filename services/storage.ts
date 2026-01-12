@@ -6,13 +6,8 @@ const CLOUD_API_BASE = 'https://api.npoint.io/bins';
 
 export const storageService = {
   getSessions: (): MatchSession[] => {
-    try {
-      const data = localStorage.getItem(STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
-    } catch (e) {
-      console.error('Failed to parse local sessions:', e);
-      return [];
-    }
+    const data = localStorage.getItem(STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
   },
   
   saveSessions: (sessions: MatchSession[]) => {
@@ -23,7 +18,6 @@ export const storageService = {
     const sessions = storageService.getSessions();
     sessions.push(session);
     storageService.saveSessions(sessions);
-    return sessions;
   },
   
   updateSession: (updatedSession: MatchSession) => {
@@ -33,17 +27,17 @@ export const storageService = {
       sessions[index] = updatedSession;
       storageService.saveSessions(sessions);
     }
-    return sessions;
   },
   
   deleteSession: (id: string) => {
     const sessions = storageService.getSessions();
     const filtered = sessions.filter(s => s.id !== id);
     storageService.saveSessions(filtered);
-    return filtered;
   },
 
+  // 雲端同步核心邏輯
   cloud: {
+    // 創建一個新的雲端同步 Bin
     createBin: async (sessions: MatchSession[]) => {
       try {
         const response = await fetch(CLOUD_API_BASE, {
@@ -52,37 +46,37 @@ export const storageService = {
           body: JSON.stringify({ sessions, lastUpdate: new Date().toISOString() })
         });
         const result = await response.json();
-        // npoint.io 回傳的是 { id: "..." }
-        return result.id || null;
+        return result.binId; // 回傳給使用者的同步代碼
       } catch (error) {
-        console.error('Cloud publishing failed:', error);
+        console.error('Failed to create cloud bin:', error);
         return null;
       }
     },
 
+    // 更新現有的雲端資料
     updateBin: async (binId: string, sessions: MatchSession[]) => {
       try {
-        const response = await fetch(`${CLOUD_API_BASE}/${binId}`, {
+        await fetch(`${CLOUD_API_BASE}/${binId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sessions, lastUpdate: new Date().toISOString() })
         });
-        return response.ok;
+        return true;
       } catch (error) {
-        console.error('Cloud update failed:', error);
+        console.error('Failed to update cloud bin:', error);
         return false;
       }
     },
 
+    // 抓取雲端資料
     fetchBin: async (binId: string) => {
       try {
-        // 加上時間戳防止快取
-        const response = await fetch(`${CLOUD_API_BASE}/${binId}?t=${Date.now()}`);
+        const response = await fetch(`${CLOUD_API_BASE}/${binId}`);
         if (!response.ok) throw new Error('Bin not found');
         const result = await response.json();
         return result.sessions as MatchSession[];
       } catch (error) {
-        console.error('Fetch cloud data failed:', error);
+        console.error('Failed to fetch cloud bin:', error);
         return null;
       }
     }
