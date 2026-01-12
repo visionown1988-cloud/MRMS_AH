@@ -16,19 +16,17 @@ const App: React.FC = () => {
   const [syncId, setSyncId] = useState<string | null>(localStorage.getItem('current_sync_id'));
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
 
-  const updateSessions = useCallback(() => {
+  const updateSessionsState = useCallback(() => {
     const data = storageService.getSessions();
     setSessions(data);
     setLastUpdate(new Date());
   }, []);
 
-  // 處理雲端同步
-  const handleCloudSync = useCallback(async () => {
+  const handleCloudFetch = useCallback(async () => {
     if (!syncId) return;
     setIsCloudSyncing(true);
     const cloudData = await storageService.cloud.fetchBin(syncId);
     if (cloudData) {
-      // 簡單的合併策略：若雲端有資料，直接以雲端為準（覆蓋本地）
       storageService.saveSessions(cloudData);
       setSessions(cloudData);
       setLastUpdate(new Date());
@@ -37,9 +35,8 @@ const App: React.FC = () => {
   }, [syncId]);
 
   useEffect(() => {
-    updateSessions();
+    updateSessionsState();
 
-    // 解析 URL 中的 syncId (例如 ?sid=123)
     const params = new URLSearchParams(window.location.search);
     const sid = params.get('sid');
     if (sid && sid !== syncId) {
@@ -49,45 +46,50 @@ const App: React.FC = () => {
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'match_results_app_data' || e.key === null) {
-        updateSessions();
+        updateSessionsState();
       }
     };
     window.addEventListener('storage', handleStorageChange);
 
-    // 輪詢邏輯：如果有同步 ID，每 3 秒檢查雲端；否則檢查本地
+    // 每 3 秒檢查一次雲端 (如果有 syncId)
     const interval = setInterval(() => {
       if (syncId) {
-        handleCloudSync();
+        handleCloudFetch();
       } else {
-        updateSessions();
+        updateSessionsState();
       }
-    }, 3500);
+    }, 3000);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       clearInterval(interval);
     };
-  }, [updateSessions, syncId, handleCloudSync]);
+  }, [updateSessionsState, syncId, handleCloudFetch]);
 
-  const onSessionCreated = () => {
-    updateSessions();
-    // 若有同步 ID，創建後自動推送到雲端
+  const pushToCloud = async (latestSessions: MatchSession[]) => {
     if (syncId) {
-      storageService.cloud.updateBin(syncId, storageService.getSessions());
+      setIsCloudSyncing(true);
+      await storageService.cloud.updateBin(syncId, latestSessions);
+      setIsCloudSyncing(false);
     }
+  };
+
+  const onSessionDataChanged = () => {
+    updateSessionsState();
+    pushToCloud(storageService.getSessions());
   };
 
   const handleJoinSync = (id: string) => {
     setSyncId(id);
     localStorage.setItem('current_sync_id', id);
-    alert(`已成功切換至同步 ID: ${id}`);
-    handleCloudSync();
+    handleCloudFetch();
   };
 
   const stopSync = () => {
-    if (window.confirm('確定停止同步？停止後將僅能看到本地儲存的舊資料。')) {
+    if (window.confirm('確定停止雲端同步？')) {
       setSyncId(null);
       localStorage.removeItem('current_sync_id');
+      window.history.replaceState({}, '', window.location.pathname);
     }
   };
 
@@ -95,14 +97,14 @@ const App: React.FC = () => {
     setRole(successRole);
     setShowLogin(null);
     setActiveTab(successRole === UserRole.ADMIN ? 'admin' : 'referee');
-    updateSessions();
+    updateSessionsState();
   };
 
   const getRoleLabel = (r: UserRole) => {
     switch (r) {
       case UserRole.ADMIN: return '後台人員';
       case UserRole.REFEREE: return '裁判人員';
-      default: return '一般選手/訪客';
+      default: return '訪客';
     }
   };
 
@@ -112,67 +114,68 @@ const App: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-2 cursor-pointer" onClick={() => setActiveTab('results')}>
             <i className="fas fa-trophy text-2xl text-yellow-400"></i>
-            <h1 className="text-xl font-bold tracking-tight hidden sm:block">比賽紀錄系統</h1>
+            <h1 className="text-xl font-bold hidden sm:block">比賽紀錄系統</h1>
           </div>
           
-          <div className="flex items-center space-x-1 sm:space-x-4">
+          <div className="flex items-center space-x-2 sm:space-x-4">
             <nav className="flex space-x-1">
-              <button onClick={() => setActiveTab('results')} className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition ${activeTab === 'results' ? 'bg-indigo-800' : 'hover:bg-indigo-600'}`}>比賽看板</button>
-              <button onClick={() => { if(role === UserRole.REFEREE) setActiveTab('referee'); else setShowLogin(UserRole.REFEREE); }} className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition ${activeTab === 'referee' ? 'bg-indigo-800' : 'hover:bg-indigo-600'}`}>裁判專區</button>
-              <button onClick={() => { if(role === UserRole.ADMIN) setActiveTab('admin'); else setShowLogin(UserRole.ADMIN); }} className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition ${activeTab === 'admin' ? 'bg-indigo-800' : 'hover:bg-indigo-600'}`}>後台管理</button>
+              <button onClick={() => setActiveTab('results')} className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition ${activeTab === 'results' ? 'bg-indigo-800' : 'hover:bg-indigo-600'}`}>看板</button>
+              <button onClick={() => role === UserRole.REFEREE ? setActiveTab('referee') : setShowLogin(UserRole.REFEREE)} className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition ${activeTab === 'referee' ? 'bg-indigo-800' : 'hover:bg-indigo-600'}`}>裁判</button>
+              <button onClick={() => role === UserRole.ADMIN ? setActiveTab('admin') : setShowLogin(UserRole.ADMIN)} className={`px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition ${activeTab === 'admin' ? 'bg-indigo-800' : 'hover:bg-indigo-600'}`}>管理</button>
             </nav>
 
-            <div className="flex items-center ml-2 space-x-2">
+            <div className="flex items-center bg-indigo-900/50 px-2 py-1 rounded-lg">
                {syncId ? (
-                 <div className="flex items-center bg-indigo-800 px-2 py-1 rounded border border-indigo-400" title={`同步 ID: ${syncId}`}>
-                    <i className={`fas fa-cloud text-[10px] mr-1 ${isCloudSyncing ? 'animate-pulse text-green-400' : 'text-indigo-300'}`}></i>
-                    <span className="text-[10px] font-mono font-bold">{syncId.substring(0,6)}</span>
-                    <button onClick={stopSync} className="ml-1 text-[10px] text-indigo-400 hover:text-white"><i className="fas fa-times"></i></button>
+                 <div className="flex items-center space-x-2">
+                    <span className="flex h-2 w-2 relative">
+                      <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isCloudSyncing ? 'bg-green-400' : 'bg-indigo-400'}`}></span>
+                      <span className={`relative inline-flex rounded-full h-2 w-2 ${isCloudSyncing ? 'bg-green-500' : 'bg-indigo-500'}`}></span>
+                    </span>
+                    <span className="text-[10px] font-mono font-bold text-indigo-100">{syncId.substring(0,6)}</span>
+                    <button onClick={stopSync} className="text-indigo-400 hover:text-white transition"><i className="fas fa-times-circle text-xs"></i></button>
                  </div>
                ) : (
-                 <div className="hidden sm:flex items-center bg-slate-600 px-2 py-1 rounded text-[10px] text-slate-300">
-                    <i className="fas fa-cloud-slash mr-1"></i> 本地模式
-                 </div>
-               )}
-               {role !== UserRole.GUEST && (
-                 <button onClick={() => {setRole(UserRole.GUEST); setActiveTab('results');}} className="bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center transition shadow-sm"><i className="fas fa-sign-out-alt text-xs"></i></button>
+                 <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-tight">LOCAL</span>
                )}
             </div>
+
+            {role !== UserRole.GUEST && (
+              <button onClick={() => {setRole(UserRole.GUEST); setActiveTab('results');}} className="bg-red-500 hover:bg-red-600 w-8 h-8 rounded-full flex items-center justify-center transition shadow-sm"><i className="fas fa-sign-out-alt text-xs"></i></button>
+            )}
           </div>
         </div>
       </header>
 
       <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
-        <div className="mb-4 flex justify-end items-center space-x-2">
-            <span className="relative flex h-2 w-2">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${syncId ? 'bg-green-400' : 'bg-blue-400'}`}></span>
-              <span className={`relative inline-flex rounded-full h-2 w-2 ${syncId ? 'bg-green-500' : 'bg-blue-500'}`}></span>
-            </span>
-            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-              {syncId ? `同步 ID: ${syncId}` : '本地資料'} (更新: {lastUpdate.toLocaleTimeString()})
-            </span>
-        </div>
-
         {activeTab === 'results' && (
           <ResultsBoard 
             sessions={sessions} 
             userRole={role} 
-            onRefresh={syncId ? handleCloudSync : updateSessions} 
+            onRefresh={syncId ? handleCloudFetch : updateSessionsState} 
             onJoinSync={handleJoinSync}
             currentSyncId={syncId || undefined}
           />
         )}
         
         {activeTab === 'admin' && role === UserRole.ADMIN && (
-          <AdminPanel onSessionCreated={onSessionCreated} currentSyncId={syncId || undefined} setSyncId={handleJoinSync} />
+          <AdminPanel 
+            sessions={sessions}
+            onSessionCreated={onSessionDataChanged} 
+            currentSyncId={syncId || undefined} 
+            setSyncId={handleJoinSync} 
+          />
         )}
 
         {activeTab === 'referee' && role === UserRole.REFEREE && (
-          <RefereePanel sessions={sessions} onResultSubmitted={onSessionCreated} />
+          <RefereePanel sessions={sessions} onResultSubmitted={onSessionDataChanged} />
         )}
 
         {showLogin && <LoginModal targetRole={showLogin} onClose={() => setShowLogin(null)} onSuccess={onLoginSuccess} />}
       </main>
+
+      <footer className="p-4 text-center text-[10px] text-gray-400 bg-white border-t">
+        系統同步狀態: {isCloudSyncing ? '同步中...' : '已就緒'} | 最後更新: {lastUpdate.toLocaleTimeString()}
+      </footer>
     </div>
   );
 };
