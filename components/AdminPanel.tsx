@@ -14,6 +14,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   
   // 密碼管理相關
+  const [currentRefereePassword, setCurrentRefereePassword] = useState('');
   const [newRefereePassword, setNewRefereePassword] = useState('');
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
@@ -29,11 +30,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
 
   useEffect(() => {
     loadSessions();
+    loadSettings();
   }, []);
 
   const loadSessions = async () => {
     const data = await storageService.getSessions();
     setSessions(data);
+  };
+
+  const loadSettings = async () => {
+    const settings = await storageService.getSettings();
+    if (settings && settings.refereePassword) {
+      setCurrentRefereePassword(settings.refereePassword);
+    }
   };
 
   const toggleSessionStatus = async (session: MatchSession) => {
@@ -50,6 +59,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
     try {
       await storageService.updateRefereePassword(newRefereePassword);
       alert('裁判登入密碼已成功更新！');
+      setCurrentRefereePassword(newRefereePassword);
       setNewRefereePassword('');
     } catch (e) {
       alert('密碼更新失敗，請檢查網路。');
@@ -216,7 +226,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
           </h2>
         </div>
         <div className="p-6">
-          <div className="max-w-md space-y-4">
+          <div className="max-w-md space-y-6">
+            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex justify-between items-center">
+              <div>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">當前裁判登入密碼</p>
+                <p className="text-2xl font-black text-slate-700 tracking-widest">
+                  {currentRefereePassword || '載入中...'}
+                </p>
+              </div>
+              <div className="bg-white p-2 rounded-lg shadow-sm">
+                <i className="fas fa-key text-amber-500 text-xl"></i>
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">更新裁判登入密碼</label>
               <div className="flex space-x-2">
