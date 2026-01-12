@@ -8,6 +8,8 @@ interface RefereePanelProps {
   onResultSubmitted: () => void;
 }
 
+const STORAGE_NAME_KEY = 'mrms_remembered_referee_name';
+
 const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted }) => {
   const [refereeName, setRefereeName] = useState('');
   const [selectedSessionId, setSelectedSessionId] = useState('');
@@ -17,19 +19,36 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
   const currentSession = sessions.find(s => s.id === selectedSessionId);
   const currentTable = currentSession?.tables.find(t => t.tableNumber === selectedTableNumber);
 
+  // 初始化載入記憶的姓名
+  useEffect(() => {
+    const savedName = localStorage.getItem(STORAGE_NAME_KEY);
+    if (savedName) setRefereeName(savedName);
+  }, []);
+
   useEffect(() => {
     setSelectedTableNumber('');
     setResult(GameResult.PENDING);
-    setRefereeName('');
   }, [selectedSessionId]);
+
+  const handleNameSelect = (name: string) => {
+    setRefereeName(name);
+    localStorage.setItem(STORAGE_NAME_KEY, name);
+  };
+
+  const switchIdentity = () => {
+    if (window.confirm('確定要切換裁判身份嗎？')) {
+      setRefereeName('');
+      localStorage.removeItem(STORAGE_NAME_KEY);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentSession) return alert('請選擇比賽場次');
+    if (!currentSession) return alert('請先選擇比賽場次');
     if (!refereeName) return alert('請先選擇您的姓名');
     if (currentSession.status !== MatchStatus.OPEN) return alert('此場次已截止回報');
     if (selectedTableNumber === '') return alert('請選擇桌號');
-    if (result === GameResult.PENDING) return alert('請選擇勝負結果');
+    if (result === GameResult.PENDING) return alert('請點選勝負結果');
 
     const updatedTables = currentSession.tables.map(t => {
       if (t.tableNumber === selectedTableNumber) {
@@ -54,116 +73,169 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
     setResult(GameResult.PENDING);
   };
 
+  // 檢查當前選取的姓名是否在場次的名單內
+  const isNameInPool = currentSession?.referees.includes(refereeName);
+
   return (
     <div className="max-w-xl mx-auto space-y-6">
-      <div className="bg-white rounded-xl shadow-md p-6 border border-emerald-100">
-        <h2 className="text-2xl font-bold text-gray-800 flex items-center mb-6">
-          <i className="fas fa-clipboard-check text-emerald-500 mr-2"></i>
-          裁判結果回報
-        </h2>
+      <div className="bg-white rounded-3xl shadow-xl p-6 border border-emerald-50 overflow-hidden">
+        <div className="flex justify-between items-start mb-8">
+          <h2 className="text-2xl font-black text-gray-800 flex items-center">
+            <i className="fas fa-clipboard-check text-emerald-500 mr-2"></i>
+            裁判結果回報
+          </h2>
+          {refereeName && (
+             <div className="flex flex-col items-end">
+               <span className="text-[10px] font-bold text-gray-400 uppercase">目前裁判</span>
+               <div className="flex items-center space-x-2">
+                 <span className="font-bold text-emerald-600">{refereeName}</span>
+                 <button onClick={switchIdentity} className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-500 hover:bg-red-50 hover:text-red-500 transition">
+                   切換身份
+                 </button>
+               </div>
+             </div>
+          )}
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">選擇比賽場次 (即時同步)</label>
-            <select 
-              value={selectedSessionId}
-              onChange={(e) => setSelectedSessionId(e.target.value)}
-              className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition bg-white"
-            >
-              <option value="">-- 請選擇場次 --</option>
+        <div className="space-y-8">
+          {/* 1. 比賽場次選擇 (按鈕) */}
+          <section>
+            <label className="block text-sm font-bold text-gray-600 mb-3 flex items-center">
+              <span className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] mr-2">1</span>
+              選擇比賽場次
+            </label>
+            <div className="flex flex-wrap gap-2">
               {sessions.map(s => (
-                <option key={s.id} value={s.id}>
-                  {s.title} {s.status === MatchStatus.CLOSED ? '(已截止)' : ''}
-                </option>
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setSelectedSessionId(s.id)}
+                  className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all border-2 ${
+                    selectedSessionId === s.id
+                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-100'
+                      : 'bg-white text-gray-500 border-gray-100 hover:border-emerald-200'
+                  }`}
+                >
+                  {s.title}
+                  {s.status === MatchStatus.CLOSED && <span className="ml-1 opacity-60">(止)</span>}
+                </button>
               ))}
-            </select>
-          </div>
+            </div>
+          </section>
 
-          {selectedSessionId && currentSession && (
-            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-              <label className="block text-sm font-semibold text-gray-700 mb-1">您的姓名</label>
-              <select 
-                value={refereeName}
-                onChange={(e) => setRefereeName(e.target.value)}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition bg-white"
-              >
-                <option value="">-- 請選擇您的姓名 --</option>
+          {/* 2. 姓名選取 (若無記憶時才顯示) */}
+          {selectedSessionId && currentSession && (!refereeName || !isNameInPool) && (
+            <section className="animate-in fade-in slide-in-from-top-4">
+              <label className="block text-sm font-bold text-gray-600 mb-3 flex items-center">
+                <span className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] mr-2">2</span>
+                您的姓名
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {currentSession.referees.map(r => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {selectedSessionId && (
-            <div className="animate-in fade-in slide-in-from-top-2 duration-400">
-              <label className="block text-sm font-semibold text-gray-700 mb-1">選擇桌號</label>
-              <select 
-                value={selectedTableNumber}
-                onChange={(e) => setSelectedTableNumber(parseInt(e.target.value))}
-                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition bg-white"
-              >
-                <option value="">-- 請選擇桌號 --</option>
-                {currentSession?.tables.map(t => (
-                  <option key={t.tableNumber} value={t.tableNumber}>
-                    第 {t.tableNumber} 桌 ({t.player1.name} vs {t.player2.name})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {currentTable && (
-            <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-100 animate-in zoom-in duration-300">
-              <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-2">對弈資訊</p>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500">先手 (P1)</p>
-                  <p className="font-bold text-gray-800">{currentTable.player1.name}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">後手 (P2)</p>
-                  <p className="font-bold text-gray-800">{currentTable.player2.name}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {currentTable && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <label className="block text-sm font-semibold text-gray-700 mb-3">比賽結果 (先手狀態)</label>
-              <div className="grid grid-cols-3 gap-3">
-                {[GameResult.WIN, GameResult.LOSS, GameResult.DRAW].map(res => (
                   <button
-                    key={res}
+                    key={r}
                     type="button"
-                    onClick={() => setResult(res)}
-                    className={`py-3 rounded-lg font-bold border-2 transition ${
-                      result === res 
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-md' 
-                        : 'bg-white text-gray-600 border-gray-200 hover:border-emerald-200'
-                    }`}
+                    onClick={() => handleNameSelect(r)}
+                    className="px-4 py-3 bg-white border border-gray-100 rounded-xl font-bold text-gray-700 hover:bg-emerald-50 hover:border-emerald-200 transition text-sm"
                   >
-                    {res}
+                    {r}
                   </button>
                 ))}
               </div>
-            </div>
+            </section>
           )}
 
-          <button 
-            type="submit"
-            disabled={!currentTable || currentSession?.status === MatchStatus.CLOSED}
-            className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition active:scale-95 flex items-center justify-center space-x-2 ${
-              currentSession?.status === MatchStatus.CLOSED 
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-emerald-600 text-white hover:bg-emerald-700'
-            }`}
-          >
-            <i className="fas fa-save"></i>
-            <span>儲存並即時發布結果</span>
-          </button>
-        </form>
+          {/* 3. 桌號選擇 (僅顯示桌號數字，精簡網格) */}
+          {selectedSessionId && refereeName && isNameInPool && (
+            <section className="animate-in fade-in slide-in-from-top-4">
+              <label className="block text-sm font-bold text-gray-600 mb-3 flex items-center">
+                <span className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] mr-2">2</span>
+                選擇桌號
+              </label>
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-60 overflow-y-auto p-1 custom-scrollbar">
+                {currentSession.tables.map(t => (
+                  <button
+                    key={t.tableNumber}
+                    type="button"
+                    onClick={() => setSelectedTableNumber(t.tableNumber)}
+                    className={`aspect-square rounded-xl text-sm font-black transition-all border-2 flex flex-col items-center justify-center ${
+                      selectedTableNumber === t.tableNumber
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                        : t.result !== GameResult.PENDING 
+                          ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-default'
+                          : 'bg-white text-gray-600 border-gray-100 hover:border-emerald-300 hover:bg-emerald-50'
+                    }`}
+                  >
+                    <span className="text-[10px] opacity-60 font-medium">No.</span>
+                    <span className="text-lg">{t.tableNumber}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* 4. 結果回報區 */}
+          {currentTable && (
+            <form onSubmit={handleSubmit} className="animate-in zoom-in duration-300 space-y-6 pt-4 border-t border-slate-50">
+              <div className="bg-slate-50 p-6 rounded-2xl border border-dashed border-slate-200">
+                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-4 text-center">正在登錄 第 {currentTable.tableNumber} 桌 結果</p>
+                <div className="flex items-center justify-between text-center gap-2">
+                  <div className="flex-1">
+                    <p className="text-xs text-indigo-500 font-bold mb-1">#{currentTable.player1.id}</p>
+                    <p className="font-black text-gray-800 text-xl">{currentTable.player1.name}</p>
+                    <p className="text-[10px] text-gray-400">先手 (P1)</p>
+                  </div>
+                  <div className="px-2 text-slate-300 font-light italic text-xl">VS</div>
+                  <div className="flex-1">
+                    <p className="text-xs text-indigo-500 font-bold mb-1">#{currentTable.player2.id}</p>
+                    <p className="font-black text-gray-800 text-xl">{currentTable.player2.name}</p>
+                    <p className="text-[10px] text-gray-400">後手 (P2)</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-center text-sm font-bold text-gray-600 mb-4">比分結果 (先手狀態)</label>
+                <div className="grid grid-cols-3 gap-3">
+                  {[GameResult.WIN, GameResult.LOSS, GameResult.DRAW].map(res => (
+                    <button
+                      key={res}
+                      type="button"
+                      onClick={() => setResult(res)}
+                      className={`py-5 rounded-2xl font-black text-xl border-4 transition-all ${
+                        result === res 
+                          ? 'bg-emerald-600 text-white border-emerald-400 shadow-lg scale-105' 
+                          : 'bg-white text-gray-400 border-gray-100 hover:border-emerald-200 hover:text-emerald-500'
+                      }`}
+                    >
+                      {res}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button 
+                type="submit"
+                disabled={currentSession?.status === MatchStatus.CLOSED}
+                className={`w-full py-5 rounded-2xl font-black text-xl shadow-xl transition-all active:scale-95 flex items-center justify-center space-x-2 ${
+                  currentSession?.status === MatchStatus.CLOSED 
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100'
+                }`}
+              >
+                <i className="fas fa-check-circle"></i>
+                <span>確認送出結果</span>
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+
+      <div className="text-center">
+        <p className="text-[10px] text-gray-300">
+          <i className="fas fa-history mr-1"></i> 
+          本裝置已鎖定為裁判身份：{refereeName || '未選取'}
+        </p>
       </div>
     </div>
   );

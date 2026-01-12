@@ -46,24 +46,33 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-4 rounded-xl shadow-sm border flex flex-wrap items-center gap-4">
-        <label className="font-bold text-gray-700">選擇比賽場次：</label>
-        <div className="flex-grow">
-          <select 
-            value={selectedSessionId}
-            onChange={(e) => setSelectedSessionId(e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-          >
-            <option value="">-- 請選擇查看場次 --</option>
-            {sessions.map(s => (
-              <option key={s.id} value={s.id}>{s.title}</option>
-            ))}
-          </select>
+      {/* 比賽場次按鈕選擇區 */}
+      <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+        <div className="flex items-center space-x-2 mb-4">
+          <i className="fas fa-layer-group text-indigo-500"></i>
+          <label className="font-bold text-gray-700">選擇比賽場次</label>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {sessions.length > 0 ? sessions.map(s => (
+            <button
+              key={s.id}
+              onClick={() => setSelectedSessionId(s.id)}
+              className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all border-2 ${
+                selectedSessionId === s.id
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-md scale-105'
+                  : 'bg-white text-gray-600 border-gray-100 hover:border-indigo-200 hover:bg-indigo-50'
+              }`}
+            >
+              {s.title}
+            </button>
+          )) : (
+            <p className="text-gray-400 text-sm italic py-2">目前尚無比賽場次資料</p>
+          )}
         </div>
       </div>
 
       {selectedSession ? (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-xl shadow-md border-l-4 border-indigo-500">
             <div className="flex-grow">
               <h2 className="text-2xl font-bold text-gray-800">{selectedSession.title}</h2>
@@ -113,14 +122,14 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
                 {completedMatches.map(t => (
                   <div key={t.tableNumber} className="bg-white px-4 py-2.5 rounded-xl shadow-sm border border-indigo-100 flex items-center space-x-3">
                     <span className="font-bold text-indigo-600 text-[16px]">第{t.tableNumber}桌:</span>
-                    <span className="text-slate-700 text-[16px] font-medium">{t.player1.name}</span>
+                    <span className="text-slate-700 text-[16px] font-medium">{t.player1.name} <span className="text-xs text-gray-400 font-normal">(#{t.player1.id})</span></span>
                     <span className={`font-black px-2 py-0.5 rounded text-[16px] ${
                       t.result === GameResult.WIN ? 'bg-green-100 text-green-700' : 
                       t.result === GameResult.LOSS ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
                     }`}>
                       {t.result}
                     </span>
-                    <span className="text-slate-700 text-[16px] font-medium">{t.player2.name}</span>
+                    <span className="text-slate-700 text-[16px] font-medium">{t.player2.name} <span className="text-xs text-gray-400 font-normal">(#{t.player2.id})</span></span>
                   </div>
                 ))}
               </div>
@@ -139,13 +148,13 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
                     <div className="text-center flex-1">
                       <p className="text-xs text-gray-500">先手 (P1)</p>
                       <p className="font-bold text-gray-800 truncate">{table.player1.name}</p>
-                      <p className="text-[10px] text-gray-400">#{table.player1.id}</p>
+                      <p className="text-[10px] text-indigo-400 font-bold">#{table.player1.id}</p>
                     </div>
                     <div className="px-4 text-gray-300 italic font-light">vs</div>
                     <div className="text-center flex-1">
                       <p className="text-xs text-gray-500">後手 (P2)</p>
                       <p className="font-bold text-gray-800 truncate">{table.player2.name}</p>
-                      <p className="text-[10px] text-gray-400">#{table.player2.id}</p>
+                      <p className="text-[10px] text-indigo-400 font-bold">#{table.player2.id}</p>
                     </div>
                   </div>
 
@@ -185,7 +194,7 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
                                onClick={() => handleEdit(table)}
                                className="text-indigo-500 hover:text-indigo-700 text-xs font-semibold"
                              >
-                               <i className="fas fa-edit mr-1"></i> 修改結果
+                               <i className="fas fa-edit mr-1"></i> 修改
                              </button>
                            )}
                            {table.submittedBy && (
@@ -204,9 +213,9 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
           </div>
         </div>
       ) : (
-        <div className="text-center py-20 bg-white rounded-xl shadow-sm border animate-pulse">
-          <i className="fas fa-search text-5xl text-gray-200 mb-4"></i>
-          <h3 className="text-xl font-medium text-gray-400">請從上方選單選擇想查看的場次</h3>
+        <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-100">
+          <i className="fas fa-hand-pointer text-5xl text-gray-200 mb-4 animate-bounce"></i>
+          <h3 className="text-xl font-medium text-gray-400">請從上方點選比賽場次按鈕</h3>
         </div>
       )}
     </div>
