@@ -118,12 +118,12 @@ const App: React.FC = () => {
           <ResultsBoard 
             sessions={sessions} 
             userRole={role} 
-            onRefresh={() => {}} // 實時模式不需手動刷新
+            onRefresh={() => {}} 
           />
         )}
         
         {activeTab === 'admin' && role === UserRole.ADMIN && (
-          <AdminPanel onSessionCreated={() => {}} />
+          <AdminPanel sessions={sessions} onSessionCreated={() => {}} />
         )}
 
         {activeTab === 'referee' && role === UserRole.REFEREE && (

@@ -152,13 +152,14 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
                 <span className="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] mr-2">2</span>
                 選擇桌號
               </label>
-              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-60 overflow-y-auto p-1 custom-scrollbar">
+              {/* 移除內部滾動條 max-h-60 overflow-y-auto */}
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 p-1">
                 {currentSession.tables.map(t => (
                   <button
                     key={t.tableNumber}
                     type="button"
                     onClick={() => setSelectedTableNumber(t.tableNumber)}
-                    className={`aspect-square rounded-xl transition-all border-2 flex items-center justify-center ${
+                    className={`py-3 rounded-xl transition-all border-2 flex items-center justify-center ${
                       selectedTableNumber === t.tableNumber
                         ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-105'
                         : t.result !== GameResult.PENDING 

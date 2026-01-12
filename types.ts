@@ -22,11 +22,17 @@ export interface PlayerInfo {
   name: string;
 }
 
+export interface ScoringConfig {
+  win: { p1: number; p2: number };   // 先手勝時的分數
+  loss: { p1: number; p2: number };  // 先手負時的分數
+  draw: { p1: number; p2: number };  // 和棋時的分數
+}
+
 export interface TableMatch {
   tableNumber: number;
   player1: PlayerInfo;
   player2: PlayerInfo;
-  assignedReferee?: string; // Optional now, as we use a session-wide pool
+  assignedReferee?: string;
   result: GameResult;
   submittedBy?: string;
   updatedAt?: string;
@@ -36,7 +42,8 @@ export interface MatchSession {
   id: string;
   title: string;
   status: MatchStatus;
-  referees: string[]; // Pool of referees for this session
+  referees: string[];
   tables: TableMatch[];
+  scoringConfig: ScoringConfig;
   createdAt: string;
 }
