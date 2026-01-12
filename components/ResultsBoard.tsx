@@ -50,7 +50,7 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
         <div className="flex items-center space-x-2 mb-4">
           <i className="fas fa-layer-group text-indigo-500"></i>
-          <label className="font-bold text-gray-700">選擇比賽場次</label>
+          <label className="font-bold text-gray-700">點選比賽場次</label>
         </div>
         <div className="flex flex-wrap gap-2">
           {sessions.length > 0 ? sessions.map(s => (
@@ -122,14 +122,14 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
                 {completedMatches.map(t => (
                   <div key={t.tableNumber} className="bg-white px-4 py-2.5 rounded-xl shadow-sm border border-indigo-100 flex items-center space-x-3">
                     <span className="font-bold text-indigo-600 text-[16px]">第{t.tableNumber}桌:</span>
-                    <span className="text-slate-700 text-[16px] font-medium">{t.player1.name} <span className="text-xs text-gray-400 font-normal">(#{t.player1.id})</span></span>
+                    <span className="text-slate-700 text-[16px] font-medium">{t.player1.name} <span className="text-xs text-indigo-400 font-bold">(#{t.player1.id})</span></span>
                     <span className={`font-black px-2 py-0.5 rounded text-[16px] ${
                       t.result === GameResult.WIN ? 'bg-green-100 text-green-700' : 
                       t.result === GameResult.LOSS ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
                     }`}>
                       {t.result}
                     </span>
-                    <span className="text-slate-700 text-[16px] font-medium">{t.player2.name} <span className="text-xs text-gray-400 font-normal">(#{t.player2.id})</span></span>
+                    <span className="text-slate-700 text-[16px] font-medium">{t.player2.name} <span className="text-xs text-indigo-400 font-bold">(#{t.player2.id})</span></span>
                   </div>
                 ))}
               </div>
@@ -148,13 +148,13 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
                     <div className="text-center flex-1">
                       <p className="text-xs text-gray-500">先手 (P1)</p>
                       <p className="font-bold text-gray-800 truncate">{table.player1.name}</p>
-                      <p className="text-[10px] text-indigo-400 font-bold">#{table.player1.id}</p>
+                      <p className="text-[10px] text-indigo-500 font-black">#{table.player1.id}</p>
                     </div>
                     <div className="px-4 text-gray-300 italic font-light">vs</div>
                     <div className="text-center flex-1">
                       <p className="text-xs text-gray-500">後手 (P2)</p>
                       <p className="font-bold text-gray-800 truncate">{table.player2.name}</p>
-                      <p className="text-[10px] text-indigo-400 font-bold">#{table.player2.id}</p>
+                      <p className="text-[10px] text-indigo-500 font-black">#{table.player2.id}</p>
                     </div>
                   </div>
 
@@ -215,7 +215,7 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
       ) : (
         <div className="text-center py-20 bg-white rounded-xl shadow-sm border border-gray-100">
           <i className="fas fa-hand-pointer text-5xl text-gray-200 mb-4 animate-bounce"></i>
-          <h3 className="text-xl font-medium text-gray-400">請從上方點選比賽場次按鈕</h3>
+          <h3 className="text-xl font-medium text-gray-400">請點選上方比賽場次標籤</h3>
         </div>
       )}
     </div>

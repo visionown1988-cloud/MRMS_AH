@@ -36,6 +36,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
     setSessions(data);
   };
 
+  const toggleSessionStatus = async (session: MatchSession) => {
+    const newStatus = session.status === MatchStatus.OPEN ? MatchStatus.CLOSED : MatchStatus.OPEN;
+    await storageService.updateSession({ ...session, status: newStatus });
+    await loadSessions();
+  };
+
   const handleUpdatePassword = async () => {
     if (!newRefereePassword) return alert('請輸入新密碼');
     if (newRefereePassword.length < 4) return alert('密碼長度建議至少 4 位');
@@ -239,22 +245,32 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
         <div className="bg-slate-50 px-6 py-4 border-b flex justify-between items-center">
           <h2 className="text-xl font-bold text-slate-800 flex items-center">
             <i className="fas fa-tasks text-indigo-500 mr-2"></i>
-            現有比賽場次
+            現有比賽場次管理
           </h2>
           <span className="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-xs font-bold">
             共 {sessions.length} 場
           </span>
         </div>
-        <div className="divide-y divide-gray-50">
+        <div className="divide-y divide-gray-100">
           {sessions.length > 0 ? sessions.map(session => (
             <div key={session.id} className="p-5 flex flex-col md:flex-row justify-between items-center hover:bg-slate-50 transition gap-4">
               <div className="flex-grow text-center md:text-left">
                 <h3 className="font-bold text-slate-800 text-lg">{session.title}</h3>
-                <div className="flex flex-wrap justify-center md:justify-start gap-2 mt-2">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${session.status === MatchStatus.OPEN ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {session.status === MatchStatus.OPEN ? '開放中' : '已截止'}
-                  </span>
-                  <span className="text-[10px] text-gray-400">桌數: {session.tables.length}</span>
+                <div className="flex flex-wrap justify-center md:justify-start gap-3 mt-2 items-center">
+                  {/* 開放/截止切換按鈕 */}
+                  <button 
+                    onClick={() => toggleSessionStatus(session)}
+                    className={`flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                      session.status === MatchStatus.OPEN 
+                        ? 'bg-green-500 text-white shadow-sm shadow-green-200' 
+                        : 'bg-red-500 text-white shadow-sm shadow-red-200'
+                    }`}
+                  >
+                    <i className={`fas ${session.status === MatchStatus.OPEN ? 'fa-lock-open' : 'fa-lock'}`}></i>
+                    <span>{session.status === MatchStatus.OPEN ? '開放傳送中' : '已截止傳送'}</span>
+                    <span className="bg-white bg-opacity-30 px-1.5 py-0.5 rounded text-[9px]">點擊切換</span>
+                  </button>
+                  <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-1 rounded">桌數: {session.tables.length}</span>
                 </div>
               </div>
               <div className="flex space-x-1">

@@ -46,7 +46,7 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
     e.preventDefault();
     if (!currentSession) return alert('請先選擇比賽場次');
     if (!refereeName) return alert('請先選擇您的姓名');
-    if (currentSession.status !== MatchStatus.OPEN) return alert('此場次已截止回報');
+    if (currentSession.status !== MatchStatus.OPEN) return alert('此場次已截止回報資料');
     if (selectedTableNumber === '') return alert('請選擇桌號');
     if (result === GameResult.PENDING) return alert('請點選勝負結果');
 
@@ -162,7 +162,7 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
                       selectedTableNumber === t.tableNumber
                         ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
                         : t.result !== GameResult.PENDING 
-                          ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-default'
+                          ? 'bg-gray-100 text-gray-400 border-gray-100 cursor-default opacity-50'
                           : 'bg-white text-gray-600 border-gray-100 hover:border-emerald-300 hover:bg-emerald-50'
                     }`}
                   >
@@ -171,6 +171,7 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
                   </button>
                 ))}
               </div>
+              <p className="text-[10px] text-gray-400 mt-2 text-center">※ 淺灰色桌號代表已有結果，仍可點擊修改</p>
             </section>
           )}
 
@@ -183,13 +184,13 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
                   <div className="flex-1">
                     <p className="text-xs text-indigo-500 font-bold mb-1">#{currentTable.player1.id}</p>
                     <p className="font-black text-gray-800 text-xl">{currentTable.player1.name}</p>
-                    <p className="text-[10px] text-gray-400">先手 (P1)</p>
+                    <p className="text-[10px] text-gray-400 mt-1">先手 (P1)</p>
                   </div>
                   <div className="px-2 text-slate-300 font-light italic text-xl">VS</div>
                   <div className="flex-1">
                     <p className="text-xs text-indigo-500 font-bold mb-1">#{currentTable.player2.id}</p>
                     <p className="font-black text-gray-800 text-xl">{currentTable.player2.name}</p>
-                    <p className="text-[10px] text-gray-400">後手 (P2)</p>
+                    <p className="text-[10px] text-gray-400 mt-1">後手 (P2)</p>
                   </div>
                 </div>
               </div>
@@ -219,12 +220,12 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
                 disabled={currentSession?.status === MatchStatus.CLOSED}
                 className={`w-full py-5 rounded-2xl font-black text-xl shadow-xl transition-all active:scale-95 flex items-center justify-center space-x-2 ${
                   currentSession?.status === MatchStatus.CLOSED 
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
                     : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100'
                 }`}
               >
                 <i className="fas fa-check-circle"></i>
-                <span>確認送出結果</span>
+                <span>{currentSession?.status === MatchStatus.CLOSED ? '目前已截止傳送' : '確認送出結果'}</span>
               </button>
             </form>
           )}
