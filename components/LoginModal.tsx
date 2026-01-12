@@ -1,7 +1,7 @@
 
-// Added React and useState imports
 import React, { useState } from 'react';
 import { UserRole } from '../types.ts';
+import { storageService } from '../services/storage.ts';
 
 interface LoginModalProps {
   targetRole: UserRole;
@@ -12,16 +12,28 @@ interface LoginModalProps {
 const LoginModal: React.FC<LoginModalProps> = ({ targetRole, onClose, onSuccess }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const correctPassword = targetRole === UserRole.ADMIN ? '0122' : '0987';
   const roleName = targetRole === UserRole.ADMIN ? '後台人員' : '裁判人員';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === correctPassword) {
-      onSuccess(targetRole);
-    } else {
-      setError('密碼錯誤，請重新輸入');
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const settings = await storageService.getSettings();
+      const correctPassword = targetRole === UserRole.ADMIN ? settings.adminPassword : settings.refereePassword;
+
+      if (password === correctPassword) {
+        onSuccess(targetRole);
+      } else {
+        setError('密碼錯誤，請重新輸入');
+      }
+    } catch (e) {
+      setError('連線失敗，請檢查網路狀態');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -37,6 +49,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ targetRole, onClose, onSuccess 
             <label className="block text-gray-700 text-sm font-bold mb-2">請輸入密碼</label>
             <input
               autoFocus
+              disabled={isLoading}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -49,15 +62,21 @@ const LoginModal: React.FC<LoginModalProps> = ({ targetRole, onClose, onSuccess 
             <button
               type="button"
               onClick={onClose}
+              disabled={isLoading}
               className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
             >
               取消
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium shadow-md"
+              disabled={isLoading}
+              className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium shadow-md flex justify-center items-center"
             >
-              確定登入
+              {isLoading ? (
+                <i className="fas fa-spinner fa-spin"></i>
+              ) : (
+                '確定登入'
+              )}
             </button>
           </div>
         </form>

@@ -9,6 +9,7 @@ import {
   deleteDoc, 
   onSnapshot,
   getDocs,
+  getDoc,
   query,
   orderBy
 } from "firebase/firestore";
@@ -26,6 +27,7 @@ const firebaseConfig = {
 // --------------------
 
 const STORAGE_KEY = 'match_results_app_data';
+const SETTINGS_KEY = 'match_results_settings';
 
 // 初始化 Firebase
 let db: any = null;
@@ -33,7 +35,6 @@ if (firebaseConfig) {
   try {
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
-    console.log("Firebase Cloud Mode Enabled");
   } catch (e) {
     console.error("Firebase init failed", e);
   }
@@ -42,7 +43,33 @@ if (firebaseConfig) {
 export const storageService = {
   isCloudEnabled: () => !!db,
 
-  // 獲取所有場次
+  // --- 系統設定 (密碼等) ---
+  getSettings: async () => {
+    if (db) {
+      const settingsDoc = await getDoc(doc(db, "config", "system"));
+      if (settingsDoc.exists()) {
+        return settingsDoc.data();
+      }
+      // 預設值
+      const defaultSettings = { refereePassword: '0987', adminPassword: '0122' };
+      await setDoc(doc(db, "config", "system"), defaultSettings);
+      return defaultSettings;
+    }
+    const local = localStorage.getItem(SETTINGS_KEY);
+    return local ? JSON.parse(local) : { refereePassword: '0987', adminPassword: '0122' };
+  },
+
+  updateRefereePassword: async (newPassword: string) => {
+    if (db) {
+      await setDoc(doc(db, "config", "system"), { refereePassword: newPassword }, { merge: true });
+    } else {
+      const settings = await storageService.getSettings();
+      settings.refereePassword = newPassword;
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    }
+  },
+
+  // --- 比賽場次管理 ---
   getSessions: async (): Promise<MatchSession[]> => {
     if (db) {
       const q = query(collection(db, "sessions"), orderBy("createdAt", "desc"));
@@ -53,7 +80,6 @@ export const storageService = {
     return data ? JSON.parse(data) : [];
   },
 
-  // 訂閱實時更新 (裁判端會自動收到新場次)
   subscribeSessions: (callback: (sessions: MatchSession[]) => void) => {
     if (db) {
       const q = query(collection(db, "sessions"), orderBy("createdAt", "desc"));

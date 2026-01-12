@@ -105,22 +105,22 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
           </div>
 
           {completedMatches.length > 0 && (
-            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 shadow-sm">
-              <h3 className="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-3 flex items-center">
+            <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5 shadow-sm">
+              <h3 className="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-4 flex items-center">
                 <i className="fas fa-poll-h mr-2"></i> 已產生成績摘要 ({completedMatches.length})
               </h3>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-3">
                 {completedMatches.map(t => (
-                  <div key={t.tableNumber} className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-indigo-100 flex items-center space-x-2 text-xs">
-                    <span className="font-bold text-indigo-600">第{t.tableNumber}桌:</span>
-                    <span className="text-gray-600">{t.player1.name}</span>
-                    <span className={`font-black px-1.5 rounded ${
+                  <div key={t.tableNumber} className="bg-white px-4 py-2.5 rounded-xl shadow-sm border border-indigo-100 flex items-center space-x-3">
+                    <span className="font-bold text-indigo-600 text-[16px]">第{t.tableNumber}桌:</span>
+                    <span className="text-slate-700 text-[16px] font-medium">{t.player1.name}</span>
+                    <span className={`font-black px-2 py-0.5 rounded text-[16px] ${
                       t.result === GameResult.WIN ? 'bg-green-100 text-green-700' : 
                       t.result === GameResult.LOSS ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
                     }`}>
                       {t.result}
                     </span>
-                    <span className="text-gray-600">{t.player2.name}</span>
+                    <span className="text-slate-700 text-[16px] font-medium">{t.player2.name}</span>
                   </div>
                 ))}
               </div>

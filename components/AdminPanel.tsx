@@ -13,6 +13,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
   const [sessions, setSessions] = useState<MatchSession[]>([]);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   
+  // 密碼管理相關
+  const [newRefereePassword, setNewRefereePassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
   const [title, setTitle] = useState('');
   const [refereeInput, setRefereeInput] = useState('');
   const [referees, setReferees] = useState<string[]>([]);
@@ -30,6 +34,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
   const loadSessions = async () => {
     const data = await storageService.getSessions();
     setSessions(data);
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!newRefereePassword) return alert('請輸入新密碼');
+    if (newRefereePassword.length < 4) return alert('密碼長度建議至少 4 位');
+    
+    setIsUpdatingPassword(true);
+    try {
+      await storageService.updateRefereePassword(newRefereePassword);
+      alert('裁判登入密碼已成功更新！');
+      setNewRefereePassword('');
+    } catch (e) {
+      alert('密碼更新失敗，請檢查網路。');
+    } finally {
+      setIsUpdatingPassword(false);
+    }
   };
 
   const addReferee = () => {
@@ -181,6 +201,40 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
 
   return (
     <div className="space-y-12 max-w-5xl mx-auto pb-20">
+      {/* 系統安全設定 */}
+      <section className="bg-white rounded-2xl shadow-sm border border-red-100 overflow-hidden">
+        <div className="bg-red-50 px-6 py-4 border-b border-red-100 flex justify-between items-center">
+          <h2 className="text-xl font-bold text-red-800 flex items-center">
+            <i className="fas fa-user-shield mr-2"></i>
+            系統帳號權限管理
+          </h2>
+        </div>
+        <div className="p-6">
+          <div className="max-w-md space-y-4">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-2">更新裁判登入密碼</label>
+              <div className="flex space-x-2">
+                <input 
+                  type="text" 
+                  value={newRefereePassword}
+                  onChange={(e) => setNewRefereePassword(e.target.value)}
+                  className="flex-grow px-4 py-2 border rounded-xl focus:ring-2 focus:ring-red-500 outline-none transition"
+                  placeholder="輸入新密碼..."
+                />
+                <button 
+                  onClick={handleUpdatePassword}
+                  disabled={isUpdatingPassword}
+                  className="bg-red-600 text-white px-6 rounded-xl font-bold hover:bg-red-700 transition disabled:bg-gray-400"
+                >
+                  {isUpdatingPassword ? '同步中...' : '確認更改'}
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-gray-400">※ 更改後，所有使用「裁判專區」的人員需使用新密碼登入。</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="bg-slate-50 px-6 py-4 border-b flex justify-between items-center">
           <h2 className="text-xl font-bold text-slate-800 flex items-center">
