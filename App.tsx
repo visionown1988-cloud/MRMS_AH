@@ -107,7 +107,7 @@ const App: React.FC = () => {
         <div className="mb-4 flex justify-between items-center text-xs">
           <div className="flex items-center text-gray-400">
             <i className={`fas fa-cloud mr-1 ${isCloud ? 'text-green-500' : 'text-gray-300'}`}></i>
-            {isCloud ? '雲端即時同步中' : '離線模式 (資料僅存於此設備)'}
+            {isCloud ? '雲端即時同步中' : '本地儲存模式'}
           </div>
           <div className="font-bold text-gray-500">
             {getRoleLabel(role)}

@@ -13,7 +13,7 @@ import {
   orderBy
 } from "firebase/firestore";
 
-// --- 已填入您的 Firebase 配置 ---
+// --- Firebase 配置 ---
 const firebaseConfig = {
   apiKey: "AIzaSyBOCxuxNkZHs4HCiTpCmkRRBJ__3NOshm8",
   authDomain: "mrmsah-40577.firebaseapp.com",
@@ -23,7 +23,7 @@ const firebaseConfig = {
   appId: "1:944005677344:web:065da88e8499504eb1d745",
   measurementId: "G-T1GLP9MPTW"
 };
-// ------------------------------------
+// --------------------
 
 const STORAGE_KEY = 'match_results_app_data';
 
@@ -53,7 +53,7 @@ export const storageService = {
     return data ? JSON.parse(data) : [];
   },
 
-  // 訂閱實時更新
+  // 訂閱實時更新 (裁判端會自動收到新場次)
   subscribeSessions: (callback: (sessions: MatchSession[]) => void) => {
     if (db) {
       const q = query(collection(db, "sessions"), orderBy("createdAt", "desc"));
@@ -62,7 +62,6 @@ export const storageService = {
         callback(sessions);
       });
     } else {
-      // 離線模式模擬
       const interval = setInterval(() => {
         const data = localStorage.getItem(STORAGE_KEY);
         callback(data ? JSON.parse(data) : []);
@@ -101,25 +100,6 @@ export const storageService = {
       const sessions = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
       const filtered = sessions.filter((s: any) => s.id !== id);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-    }
-  },
-
-  generateShareCode: (session: MatchSession): string => {
-    const jsonStr = JSON.stringify(session);
-    return btoa(unescape(encodeURIComponent(jsonStr)));
-  },
-
-  importFromCode: async (code: string): Promise<MatchSession | null> => {
-    try {
-      const jsonStr = decodeURIComponent(escape(atob(code)));
-      const session = JSON.parse(jsonStr) as MatchSession;
-      if (session.id && session.title) {
-        await storageService.addSession(session);
-        return session;
-      }
-      return null;
-    } catch (e) {
-      return null;
     }
   }
 };

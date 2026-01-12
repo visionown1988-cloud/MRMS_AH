@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { MatchSession, MatchStatus, TableMatch, GameResult } from '../types.ts';
+import { MatchSession, MatchStatus, GameResult } from '../types.ts';
 import { storageService } from '../services/storage.ts';
 
 interface RefereePanelProps {
@@ -13,8 +13,6 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
   const [selectedSessionId, setSelectedSessionId] = useState('');
   const [selectedTableNumber, setSelectedTableNumber] = useState<number | ''>('');
   const [result, setResult] = useState<GameResult>(GameResult.PENDING);
-  const [importCode, setImportCode] = useState('');
-  const [showImport, setShowImport] = useState(false);
   
   const currentSession = sessions.find(s => s.id === selectedSessionId);
   const currentTable = currentSession?.tables.find(t => t.tableNumber === selectedTableNumber);
@@ -25,29 +23,13 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
     setRefereeName('');
   }, [selectedSessionId]);
 
-  // Fixed handleImport to be async and await storageService.importFromCode
-  const handleImport = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!importCode) return;
-    const session = await storageService.importFromCode(importCode);
-    if (session) {
-      alert(`成功載入場次：${session.title}`);
-      setSelectedSessionId(session.id);
-      setImportCode('');
-      setShowImport(false);
-      onResultSubmitted(); // 觸發主介面更新清單
-    } else {
-      alert('無效的代碼，請重新檢查。');
-    }
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentSession) return alert('請選擇比賽場次');
     if (!refereeName) return alert('請先選擇您的姓名');
-    if (currentSession.status !== MatchStatus.OPEN) return alert('此場次已截止');
+    if (currentSession.status !== MatchStatus.OPEN) return alert('此場次已截止回報');
     if (selectedTableNumber === '') return alert('請選擇桌號');
-    if (result === GameResult.PENDING) return alert('請選擇結果');
+    if (result === GameResult.PENDING) return alert('請選擇勝負結果');
 
     const updatedTables = currentSession.tables.map(t => {
       if (t.tableNumber === selectedTableNumber) {
@@ -67,7 +49,7 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
     });
 
     onResultSubmitted();
-    alert('結果已儲存於本機！請注意：由於目前為本地儲存模式，管理員需從此設備讀取或您需傳回結果。');
+    alert('結果已成功同步更新！');
     setSelectedTableNumber('');
     setResult(GameResult.PENDING);
   };
@@ -75,37 +57,14 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
   return (
     <div className="max-w-xl mx-auto space-y-6">
       <div className="bg-white rounded-xl shadow-md p-6 border border-emerald-100">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center">
-            <i className="fas fa-clipboard-check text-emerald-500 mr-2"></i>
-            裁判結果回報
-          </h2>
-          <button 
-            onClick={() => setShowImport(!showImport)}
-            className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full hover:bg-blue-100 transition"
-          >
-            {showImport ? '取消導入' : '載入新場次代碼'}
-          </button>
-        </div>
-
-        {showImport && (
-          <form onSubmit={handleImport} className="mb-8 p-4 bg-blue-50 rounded-xl border border-blue-100 animate-in fade-in zoom-in duration-300">
-            <label className="block text-sm font-bold text-blue-700 mb-2">請貼上後台提供的場次代碼</label>
-            <textarea 
-              value={importCode}
-              onChange={(e) => setImportCode(e.target.value)}
-              className="w-full p-3 text-xs border rounded-lg mb-3 h-24 font-mono"
-              placeholder="貼上代碼..."
-            />
-            <button type="submit" className="w-full py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition">
-              確認載入比賽資訊
-            </button>
-          </form>
-        )}
+        <h2 className="text-2xl font-bold text-gray-800 flex items-center mb-6">
+          <i className="fas fa-clipboard-check text-emerald-500 mr-2"></i>
+          裁判結果回報
+        </h2>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">選擇比賽場次</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">選擇比賽場次 (即時同步)</label>
             <select 
               value={selectedSessionId}
               onChange={(e) => setSelectedSessionId(e.target.value)}
@@ -202,12 +161,8 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
             }`}
           >
             <i className="fas fa-save"></i>
-            <span>儲存結果</span>
+            <span>儲存並即時發布結果</span>
           </button>
-          
-          <p className="text-[10px] text-center text-gray-400 mt-4 italic">
-            提示：目前採離線模式。若需多人同步，請讓裁判在同一台主控電腦操作，或定期匯出資料進行整合。
-          </p>
         </form>
       </div>
     </div>

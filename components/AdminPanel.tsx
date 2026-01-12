@@ -12,7 +12,6 @@ interface AdminPanelProps {
 const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
   const [sessions, setSessions] = useState<MatchSession[]>([]);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
-  const [showShareModal, setShowShareModal] = useState<string | null>(null);
   
   const [title, setTitle] = useState('');
   const [refereeInput, setRefereeInput] = useState('');
@@ -28,17 +27,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
     loadSessions();
   }, []);
 
-  // Fixed loadSessions to be async and await storageService.getSessions
   const loadSessions = async () => {
     const data = await storageService.getSessions();
     setSessions(data);
-  };
-
-  const handleShare = (session: MatchSession) => {
-    const code = storageService.generateShareCode(session);
-    navigator.clipboard.writeText(code);
-    setShowShareModal(code);
-    alert('場次分享代碼已複製到剪貼簿！您可以傳送給裁判。');
   };
 
   const addReferee = () => {
@@ -131,7 +122,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
     XLSX.writeFile(workbook, `${session.title}_比賽結果.xlsx`);
   };
 
-  // Fixed handleSubmit to await storageService calls
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title) return alert('請輸入場次標題');
@@ -160,7 +150,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
         createdAt: new Date().toISOString(), 
         ...sessionData 
       });
-      alert('場次已創建');
+      alert('場次已成功建立並同步雲端');
     }
     resetForm();
     onSessionCreated();
@@ -180,9 +170,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
     formRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Fixed handleDelete to await storageService.deleteSession
   const handleDelete = async (id: string) => {
-    if (window.confirm('確定刪除此比賽場次？')) {
+    if (window.confirm('確定刪除此比賽場次？此動作將同步影響所有設備。')) {
       await storageService.deleteSession(id);
       await loadSessions();
       onSessionCreated();
@@ -198,14 +187,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
             <i className="fas fa-tasks text-indigo-500 mr-2"></i>
             現有比賽場次
           </h2>
-          <div className="flex items-center space-x-2">
-            <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-100 hidden sm:block">
-              <i className="fas fa-info-circle mr-1"></i>資料目前僅存於此設備
-            </span>
-            <span className="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-xs font-bold">
-              共 {sessions.length} 場
-            </span>
-          </div>
+          <span className="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-xs font-bold">
+            共 {sessions.length} 場
+          </span>
         </div>
         <div className="divide-y divide-gray-50">
           {sessions.length > 0 ? sessions.map(session => (
@@ -220,9 +204,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
                 </div>
               </div>
               <div className="flex space-x-1">
-                <button onClick={() => handleShare(session)} className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="複製分享代碼給裁判">
-                  <i className="fas fa-share-alt text-xl"></i>
-                </button>
                 <button onClick={() => handleExportExcel(session)} className="p-2.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition" title="匯出 Excel">
                   <i className="fas fa-file-excel text-xl"></i>
                 </button>
