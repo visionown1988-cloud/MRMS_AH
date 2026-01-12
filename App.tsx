@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { UserRole, MatchSession } from './types.ts';
 import { storageService } from './services/storage.ts';
 import AdminPanel from './components/AdminPanel.tsx';
@@ -12,10 +12,37 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'admin' | 'referee' | 'results'>('results');
   const [showLogin, setShowLogin] = useState<UserRole | null>(null);
   const [sessions, setSessions] = useState<MatchSession[]>([]);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
-  useEffect(() => {
-    setSessions(storageService.getSessions());
+  // 封裝更新邏輯，確保每次讀取 localStorage 後更新 UI
+  const updateSessions = useCallback(() => {
+    const data = storageService.getSessions();
+    setSessions(data);
+    setLastUpdate(new Date());
   }, []);
+
+  // 核心即時同步邏輯
+  useEffect(() => {
+    updateSessions();
+
+    // 1. 同裝置跨分頁同步：當其他分頁修改 localStorage 時，本分頁會收到通知並自動重新整理
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'match_results_app_data' || e.key === null) {
+        updateSessions();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    // 2. 自動輪詢機制：每 3 秒強制檢查一次 localStorage，確保 UI 與儲存層完全一致
+    const interval = setInterval(() => {
+      updateSessions();
+    }, 3000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [updateSessions]);
 
   const handleLogin = (targetRole: UserRole) => {
     if (role === targetRole) {
@@ -35,10 +62,7 @@ const App: React.FC = () => {
     setRole(successRole);
     setShowLogin(null);
     setActiveTab(successRole === UserRole.ADMIN ? 'admin' : 'referee');
-  };
-
-  const updateSessions = () => {
-    setSessions(storageService.getSessions());
+    updateSessions();
   };
 
   const getRoleLabel = (r: UserRole) => {
@@ -102,6 +126,17 @@ const App: React.FC = () => {
       </header>
 
       <main className="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+        {/* 即時更新狀態指示器 */}
+        <div className="mb-4 flex justify-end items-center space-x-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+              即時同步中 (最後更新: {lastUpdate.toLocaleTimeString()})
+            </span>
+        </div>
+
         <div className="mb-6 flex justify-between items-center bg-white p-3 rounded-lg shadow-sm border border-gray-100 lg:hidden">
           <div className="flex items-center space-x-2">
             <div className={`w-2 h-2 rounded-full ${role === UserRole.ADMIN ? 'bg-purple-500' : role === UserRole.REFEREE ? 'bg-emerald-500' : 'bg-blue-500'}`}></div>
