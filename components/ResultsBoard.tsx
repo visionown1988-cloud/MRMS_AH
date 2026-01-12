@@ -9,6 +9,8 @@ interface ResultsBoardProps {
   onRefresh: () => void;
 }
 
+const STORAGE_NAME_KEY = 'mrms_remembered_referee_name';
+
 const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefresh }) => {
   const [selectedSessionId, setSelectedSessionId] = useState<string>('');
   const [editingTable, setEditingTable] = useState<{ sessionId: string, tableNumber: number } | null>(null);
@@ -30,12 +32,27 @@ const ResultsBoard: React.FC<ResultsBoardProps> = ({ sessions, userRole, onRefre
 
   const saveEdit = () => {
     if (!selectedSession || !editingTable) return;
+
+    let editorName = '系統';
+    if (userRole === UserRole.ADMIN) {
+      editorName = '後台人員';
+    } else if (userRole === UserRole.REFEREE) {
+      const savedName = localStorage.getItem(STORAGE_NAME_KEY);
+      editorName = savedName || '裁判人員';
+    }
+
     const updatedTables = selectedSession.tables.map(t => {
       if (t.tableNumber === editingTable.tableNumber) {
-        return { ...t, result: editResult, updatedAt: new Date().toISOString(), submittedBy: `${userRole === UserRole.ADMIN ? '後台' : '裁判'}修改` };
+        return { 
+          ...t, 
+          result: editResult, 
+          updatedAt: new Date().toISOString(), 
+          submittedBy: editorName 
+        };
       }
       return t;
     });
+
     storageService.updateSession({ ...selectedSession, tables: updatedTables });
     setEditingTable(null);
     onRefresh();
