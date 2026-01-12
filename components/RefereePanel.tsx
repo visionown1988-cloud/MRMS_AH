@@ -13,6 +13,8 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
   const [selectedSessionId, setSelectedSessionId] = useState('');
   const [selectedTableNumber, setSelectedTableNumber] = useState<number | ''>('');
   const [result, setResult] = useState<GameResult>(GameResult.PENDING);
+  const [importCode, setImportCode] = useState('');
+  const [showImport, setShowImport] = useState(false);
   
   const currentSession = sessions.find(s => s.id === selectedSessionId);
   const currentTable = currentSession?.tables.find(t => t.tableNumber === selectedTableNumber);
@@ -23,13 +25,29 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
     setRefereeName('');
   }, [selectedSessionId]);
 
+  // Fixed handleImport to be async and await storageService.importFromCode
+  const handleImport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importCode) return;
+    const session = await storageService.importFromCode(importCode);
+    if (session) {
+      alert(`成功載入場次：${session.title}`);
+      setSelectedSessionId(session.id);
+      setImportCode('');
+      setShowImport(false);
+      onResultSubmitted(); // 觸發主介面更新清單
+    } else {
+      alert('無效的代碼，請重新檢查。');
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentSession) return alert('請選擇比賽場次');
     if (!refereeName) return alert('請先選擇您的姓名');
-    if (currentSession.status !== MatchStatus.OPEN) return alert('此場次已截止，無法傳送資料');
+    if (currentSession.status !== MatchStatus.OPEN) return alert('此場次已截止');
     if (selectedTableNumber === '') return alert('請選擇桌號');
-    if (result === GameResult.PENDING) return alert('請選擇比賽結果');
+    if (result === GameResult.PENDING) return alert('請選擇結果');
 
     const updatedTables = currentSession.tables.map(t => {
       if (t.tableNumber === selectedTableNumber) {
@@ -49,7 +67,7 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
     });
 
     onResultSubmitted();
-    alert('結果已成功傳送！');
+    alert('結果已儲存於本機！請注意：由於目前為本地儲存模式，管理員需從此設備讀取或您需傳回結果。');
     setSelectedTableNumber('');
     setResult(GameResult.PENDING);
   };
@@ -57,10 +75,33 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
   return (
     <div className="max-w-xl mx-auto space-y-6">
       <div className="bg-white rounded-xl shadow-md p-6 border border-emerald-100">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-          <i className="fas fa-clipboard-check text-emerald-500 mr-2"></i>
-          裁判結果回報
-        </h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+            <i className="fas fa-clipboard-check text-emerald-500 mr-2"></i>
+            裁判結果回報
+          </h2>
+          <button 
+            onClick={() => setShowImport(!showImport)}
+            className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full hover:bg-blue-100 transition"
+          >
+            {showImport ? '取消導入' : '載入新場次代碼'}
+          </button>
+        </div>
+
+        {showImport && (
+          <form onSubmit={handleImport} className="mb-8 p-4 bg-blue-50 rounded-xl border border-blue-100 animate-in fade-in zoom-in duration-300">
+            <label className="block text-sm font-bold text-blue-700 mb-2">請貼上後台提供的場次代碼</label>
+            <textarea 
+              value={importCode}
+              onChange={(e) => setImportCode(e.target.value)}
+              className="w-full p-3 text-xs border rounded-lg mb-3 h-24 font-mono"
+              placeholder="貼上代碼..."
+            />
+            <button type="submit" className="w-full py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition">
+              確認載入比賽資訊
+            </button>
+          </form>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
@@ -82,30 +123,16 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
           {selectedSessionId && currentSession && (
             <div className="animate-in fade-in slide-in-from-top-2 duration-300">
               <label className="block text-sm font-semibold text-gray-700 mb-1">您的姓名</label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-                  <i className="fas fa-user-tie"></i>
-                </span>
-                <select 
-                  value={refereeName}
-                  onChange={(e) => setRefereeName(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition bg-white"
-                >
-                  <option value="">-- 請選擇您的姓名 --</option>
-                  {currentSession.referees.map(r => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                  <option value="other_manual">其他 (手動輸入...)</option>
-                </select>
-              </div>
-              {refereeName === 'other_manual' && (
-                <input 
-                  type="text" 
-                  placeholder="請輸入姓名"
-                  className="w-full mt-2 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  onBlur={(e) => setRefereeName(e.target.value)}
-                />
-              )}
+              <select 
+                value={refereeName}
+                onChange={(e) => setRefereeName(e.target.value)}
+                className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none transition bg-white"
+              >
+                <option value="">-- 請選擇您的姓名 --</option>
+                {currentSession.referees.map(r => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
             </div>
           )}
 
@@ -132,12 +159,12 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
               <p className="text-xs text-emerald-600 font-bold uppercase tracking-wider mb-2">對弈資訊</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-gray-500">先手選手 (P1)</p>
-                  <p className="font-bold text-gray-800">{currentTable.player1.id} - {currentTable.player1.name}</p>
+                  <p className="text-xs text-gray-500">先手 (P1)</p>
+                  <p className="font-bold text-gray-800">{currentTable.player1.name}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">後手選手 (P2)</p>
-                  <p className="font-bold text-gray-800">{currentTable.player2.id} - {currentTable.player2.name}</p>
+                  <p className="text-xs text-gray-500">後手 (P2)</p>
+                  <p className="font-bold text-gray-800">{currentTable.player2.name}</p>
                 </div>
               </div>
             </div>
@@ -154,7 +181,7 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
                     onClick={() => setResult(res)}
                     className={`py-3 rounded-lg font-bold border-2 transition ${
                       result === res 
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-105' 
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-md' 
                         : 'bg-white text-gray-600 border-gray-200 hover:border-emerald-200'
                     }`}
                   >
@@ -168,19 +195,19 @@ const RefereePanel: React.FC<RefereePanelProps> = ({ sessions, onResultSubmitted
           <button 
             type="submit"
             disabled={!currentTable || currentSession?.status === MatchStatus.CLOSED}
-            className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition active:transform active:scale-95 flex items-center justify-center space-x-2 ${
+            className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition active:scale-95 flex items-center justify-center space-x-2 ${
               currentSession?.status === MatchStatus.CLOSED 
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-emerald-600 text-white hover:bg-emerald-700'
             }`}
           >
-            <i className="fas fa-paper-plane"></i>
-            <span>正式傳送結果</span>
+            <i className="fas fa-save"></i>
+            <span>儲存結果</span>
           </button>
           
-          {currentSession?.status === MatchStatus.CLOSED && (
-            <p className="text-center text-red-500 text-sm font-medium">該比賽場次已截止接收資料</p>
-          )}
+          <p className="text-[10px] text-center text-gray-400 mt-4 italic">
+            提示：目前採離線模式。若需多人同步，請讓裁判在同一台主控電腦操作，或定期匯出資料進行整合。
+          </p>
         </form>
       </div>
     </div>

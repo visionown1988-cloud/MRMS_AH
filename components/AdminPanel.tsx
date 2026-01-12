@@ -12,6 +12,7 @@ interface AdminPanelProps {
 const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
   const [sessions, setSessions] = useState<MatchSession[]>([]);
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState<string | null>(null);
   
   const [title, setTitle] = useState('');
   const [refereeInput, setRefereeInput] = useState('');
@@ -27,8 +28,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
     loadSessions();
   }, []);
 
-  const loadSessions = () => {
-    setSessions(storageService.getSessions());
+  // Fixed loadSessions to be async and await storageService.getSessions
+  const loadSessions = async () => {
+    const data = await storageService.getSessions();
+    setSessions(data);
+  };
+
+  const handleShare = (session: MatchSession) => {
+    const code = storageService.generateShareCode(session);
+    navigator.clipboard.writeText(code);
+    setShowShareModal(code);
+    alert('場次分享代碼已複製到剪貼簿！您可以傳送給裁判。');
   };
 
   const addReferee = () => {
@@ -88,7 +98,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
-        if (jsonData.length === 0) return alert('Excel 檔案內沒有資料');
         
         const importedTables: Partial<TableMatch>[] = jsonData.map((row: any, idx) => ({
           tableNumber: row['桌號'] || row['Table'] || (idx + 1),
@@ -99,7 +108,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
         setTables(importedTables);
         if (fileInputRef.current) fileInputRef.current.value = '';
       } catch (err) {
-        alert('解析 Excel 失敗，請檢查欄位名稱（桌號, 先手ID, 先手姓名, 後手ID, 後手姓名）');
+        alert('解析 Excel 失敗');
       }
     };
     reader.readAsArrayBuffer(file);
@@ -122,7 +131,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
     XLSX.writeFile(workbook, `${session.title}_比賽結果.xlsx`);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Fixed handleSubmit to await storageService calls
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title) return alert('請輸入場次標題');
     if (referees.length === 0) return alert('請至少輸入一位裁判人員');
@@ -141,10 +151,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
 
     if (editingSessionId) {
       const existing = sessions.find(s => s.id === editingSessionId);
-      if (existing) storageService.updateSession({ ...existing, ...sessionData });
+      if (existing) await storageService.updateSession({ ...existing, ...sessionData });
       alert('場次已更新');
     } else {
-      storageService.addSession({ 
+      await storageService.addSession({ 
         id: uuidv4(), 
         status: MatchStatus.OPEN, 
         createdAt: new Date().toISOString(), 
@@ -154,7 +164,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
     }
     resetForm();
     onSessionCreated();
-    loadSessions();
+    await loadSessions();
   };
 
   const resetForm = () => {
@@ -170,10 +180,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
     formRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleDelete = (id: string) => {
+  // Fixed handleDelete to await storageService.deleteSession
+  const handleDelete = async (id: string) => {
     if (window.confirm('確定刪除此比賽場次？')) {
-      storageService.deleteSession(id);
-      loadSessions();
+      await storageService.deleteSession(id);
+      await loadSessions();
       onSessionCreated();
       if (editingSessionId === id) resetForm();
     }
@@ -181,16 +192,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
 
   return (
     <div className="space-y-12 max-w-5xl mx-auto pb-20">
-      {/* 列表區 */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="bg-slate-50 px-6 py-4 border-b flex justify-between items-center">
           <h2 className="text-xl font-bold text-slate-800 flex items-center">
             <i className="fas fa-tasks text-indigo-500 mr-2"></i>
             現有比賽場次
           </h2>
-          <span className="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-xs font-bold">
-            總計 {sessions.length} 場
-          </span>
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-100 hidden sm:block">
+              <i className="fas fa-info-circle mr-1"></i>資料目前僅存於此設備
+            </span>
+            <span className="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-xs font-bold">
+              共 {sessions.length} 場
+            </span>
+          </div>
         </div>
         <div className="divide-y divide-gray-50">
           {sessions.length > 0 ? sessions.map(session => (
@@ -202,17 +217,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
                     {session.status === MatchStatus.OPEN ? '開放中' : '已截止'}
                   </span>
                   <span className="text-[10px] text-gray-400">桌數: {session.tables.length}</span>
-                  <span className="text-[10px] text-gray-400">裁判: {session.referees.length}位</span>
                 </div>
               </div>
-              <div className="flex space-x-2">
-                <button onClick={() => handleExportExcel(session)} className="p-2.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition" title="匯出結果 Excel">
+              <div className="flex space-x-1">
+                <button onClick={() => handleShare(session)} className="p-2.5 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="複製分享代碼給裁判">
+                  <i className="fas fa-share-alt text-xl"></i>
+                </button>
+                <button onClick={() => handleExportExcel(session)} className="p-2.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition" title="匯出 Excel">
                   <i className="fas fa-file-excel text-xl"></i>
                 </button>
-                <button onClick={() => startEdit(session)} className="p-2.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="修改內容">
+                <button onClick={() => startEdit(session)} className="p-2.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition" title="修改">
                   <i className="fas fa-edit text-xl"></i>
                 </button>
-                <button onClick={() => handleDelete(session.id)} className="p-2.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="刪除場次">
+                <button onClick={() => handleDelete(session.id)} className="p-2.5 text-red-500 hover:bg-red-50 rounded-lg transition" title="刪除">
                   <i className="fas fa-trash-alt text-xl"></i>
                 </button>
               </div>
@@ -223,7 +240,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onSessionCreated }) => {
         </div>
       </section>
 
-      {/* 表單區 */}
       <div ref={formRef} className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
         <h2 className="text-2xl font-black text-slate-800 mb-8 flex items-center">
           <i className={`fas ${editingSessionId ? 'fa-pen-nib text-amber-500' : 'fa-plus-circle text-indigo-500'} mr-3`}></i>
