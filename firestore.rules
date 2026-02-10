@@ -1,0 +1,82 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- 輔助函式 (Helpers) ---
+
+    // 檢查是否為字串
+    function isString(val) {
+      return val is string;
+    }
+    
+    // 檢查是否為數字 (整數或浮點數)
+    function isNumber(val) {
+      return val is number || val is float || val is int;
+    }
+    
+    // 檢查是否為陣列
+    function isList(val) {
+      return val is list;
+    }
+    
+    // 驗證計分配置結構 (Scoring Config Schema)
+    function isValidScoring(scoring) {
+      return scoring.keys().hasAll(['win', 'loss', 'draw']) &&
+             scoring.win.keys().hasAll(['p1', 'p2']) &&
+             isNumber(scoring.win.p1) && isNumber(scoring.win.p2) &&
+             scoring.loss.keys().hasAll(['p1', 'p2']) &&
+             isNumber(scoring.loss.p1) && isNumber(scoring.loss.p2) &&
+             scoring.draw.keys().hasAll(['p1', 'p2']) &&
+             isNumber(scoring.draw.p1) && isNumber(scoring.draw.p2);
+    }
+
+    // 驗證比賽場次結構 (Session Schema)
+    // 確保所有必要欄位存在且類型正確，防止資料庫被寫入垃圾資料
+    function isValidSession(data) {
+       return data.keys().hasAll(['id', 'title', 'status', 'referees', 'scoringConfig', 'tables', 'createdAt']) &&
+              isString(data.id) &&
+              isString(data.title) && data.title.size() > 0 &&
+              (data.status == 'OPEN' || data.status == 'CLOSED') &&
+              isList(data.referees) &&
+              isValidScoring(data.scoringConfig) &&
+              isList(data.tables) &&
+              isString(data.createdAt);
+    }
+
+    // 驗證系統設定結構
+    // 必須包含管理員與裁判密碼，且密碼長度至少4位
+    function isValidSystemConfig(data) {
+      return data.keys().hasAll(['adminPassword', 'refereePassword']) &&
+             isString(data.adminPassword) && data.adminPassword.size() >= 4 &&
+             isString(data.refereePassword) && data.refereePassword.size() >= 4;
+    }
+
+    // --- 規則定義 (Rules) ---
+
+    // 1. 系統設定 (System Config)
+    match /config/system {
+      // 允許讀取：因為應用程式採用前端密碼比對，客戶端必須能讀取此文件才能進行登入驗證。
+      allow read: if true;
+      
+      // 允許寫入：必須符合嚴格的結構驗證。
+      // 注意：request.resource.data 代表寫入後的最終文件狀態 (包含 merge 後的結果)。
+      allow write: if isValidSystemConfig(request.resource.data);
+    }
+
+    // 2. 比賽場次 (Match Sessions)
+    match /sessions/{sessionId} {
+      // 允許公開讀取：所有觀眾皆需查看比分。
+      allow read: if true;
+      
+      // 允許寫入 (新增/修改)：
+      // 由於沒有後端使用者驗證，我們依賴嚴格的 Schema 驗證來保護資料庫完整性。
+      // 任何寫入都必須包含完整的場次結構，防止惡意刪除特定欄位。
+      allow write: if isValidSession(request.resource.data);
+      
+      // 允許刪除：允許擁有刪除權限的操作 (此處不設限，依賴前端 Admin 面板保護)。
+      allow delete: if true;
+    }
+  }
+}
