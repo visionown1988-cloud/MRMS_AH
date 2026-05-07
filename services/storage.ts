@@ -19,13 +19,13 @@ import {
 
 // --- Firebase 配置 ---
 const firebaseConfig = {
-  apiKey: "AIzaSyBOCxuxNkZHs4HCiTpCmkRRBJ__3NOshm8",
-  authDomain: "mrmsah-40577.firebaseapp.com",
-  projectId: "mrmsah-40577",
-  storageBucket: "mrmsah-40577.firebasestorage.app",
-  messagingSenderId: "944005677344",
-  appId: "1:944005677344:web:065da88e8499504eb1d745",
-  measurementId: "G-T1GLP9MPTW"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 // --------------------
 

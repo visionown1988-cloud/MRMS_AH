@@ -1,5 +1,6 @@
 {
   "name": "MRMS_AH",
   "description": "A comprehensive responsive web application for match coordinators, referees, and spectators to manage and view tournament results in real-time.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": []
 }
